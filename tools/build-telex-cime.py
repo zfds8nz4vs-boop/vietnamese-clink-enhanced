@@ -63,8 +63,8 @@ def telex_syllable_end(text):
         parts.append(shape)
         if ch_tone: tone=ch_tone
     raw="".join(parts)
-    if raw=="uwow": raw="uow"
-    elif raw=="UWOW": raw="UOW"
+    if "uwow" in raw and vowel_label(text[-1]) not in VOWELS: raw=raw.replace("uwow","uow")
+    elif "UWOW" in raw and vowel_label(text[-1]) not in VOWELS: raw=raw.replace("UWOW","UOW")
     return raw+(tone or "")
 
 def telex_plain_syllable(text):
