@@ -219,8 +219,72 @@ local function choose_tone_index(chars)
     return idx[start+math.floor((#work-1)/2)]
 end
 
+local valid_onsets = {
+    b=true,c=true,d=true,đ=true,g=true,h=true,k=true,l=true,m=true,n=true,p=true,
+    q=true,r=true,s=true,t=true,v=true,x=true,
+    ch=true,gh=true,gi=true,kh=true,ng=true,ngh=true,nh=true,ph=true,
+    qu=true,th=true,tr=true,
+    B=true,C=true,D=true,Đ=true,G=true,H=true,K=true,L=true,M=true,N=true,P=true,
+    Q=true,R=true,S=true,T=true,V=true,X=true,
+    CH=true,GH=true,GI=true,KH=true,NG=true,NGH=true,NH=true,PH=true,
+    QU=true,TH=true,TR=true,
+}
+
+local valid_nuclei = {
+    a=true,ai=true,ao=true,au=true,ay=true,ă=true,â=true,
+    e=true,eo=true,ê=true,êu=true,
+    i=true,ia=true,ie=true,iu=true,iê=true,
+    o=true,oi=true,oa=true,oe=true,oo=true,ô=true,ôi=true,ôô=true,ơ=true,ơi=true,
+    u=true,ua=true,ui=true,uo=true,uô=true,uê=true,ư=true,ưa=true,ưi=true,ươ=true,ưu=true,
+    y=true,ye=true,yê=true,
+    uy=true,uya=true,uye=true,uyê=true,uyu=true,
+    oai=true,oay=true,oeu=true,
+    uai=true,uay=true,uây=true,uoi=true,uôi=true,
+    iêu=true,yêu=true,ieu=true,yeu=true,
+    uâ=true, uây=true, ươu=true,
+}
+
+local function is_valid_tone_syllable(chars)
+    -- Tone placement should not turn arbitrary ASCII/consonant sequences into
+    -- something that merely looks Vietnamese.  We validate the syllable's
+    -- onset and vowel nucleus, while deliberately not requiring a dictionary
+    -- hit: Vietnamese freely accepts names, technical terms, and new words.
+    local onset={}
+    local nucleus={}
+    local seen_vowel=false
+
+    for _,c in ipairs(chars) do
+        if vowels[c] then
+            seen_vowel=true
+            nucleus[#nucleus+1]=vowel_lower(c)
+        elseif not seen_vowel then
+            onset[#onset+1]=c
+        else
+            -- A Vietnamese syllable cannot have another consonant after the
+            -- vowel nucleus in this simplified spelling validator.
+            return false
+        end
+    end
+
+    if not seen_vowel then return false end
+
+    local onset_s=table.concat(onset)
+    local nucleus_s=table.concat(nucleus)
+
+    if onset_s~="" and not valid_onsets[onset_s] then
+        return false
+    end
+    if not valid_nuclei[nucleus_s] then
+        return false
+    end
+    return true
+end
+
 local function apply_tone(chars,tone_id)
     if not tone_id then return chars end
+    if not is_valid_tone_syllable(chars) then
+        return chars
+    end
     local pos=choose_tone_index(chars)
     if not pos then return chars end
     local c=chars[pos]
