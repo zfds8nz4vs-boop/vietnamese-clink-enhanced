@@ -67,6 +67,26 @@ local function utf8_chars(s)
     return out
 end
 
+
+local canonical_base = {
+    ["â"]="aa",["ă"]="aw",["ê"]="ee",["ô"]="oo",["ơ"]="ow",["ư"]="uw",["đ"]="dd",
+    ["Â"]="AA",["Ă"]="AW",["Ê"]="EE",["Ô"]="OO",["Ơ"]="OW",["Ư"]="UW",["Đ"]="DD",
+}
+
+local function to_canonical_telex(word)
+    local chars=utf8_chars(word)
+    local out={}
+    for _,c in ipairs(chars) do
+        local b=unaccent[c] or c
+        if canonical_base[b] then
+            out[#out+1]=canonical_base[b]
+        else
+            out[#out+1]=b
+        end
+    end
+    return table.concat(out)
+end
+
 local function normalize_raw(word)
     local chars=utf8_chars(word)
     local out={}
@@ -143,6 +163,9 @@ local function transform_current_word(rl_buffer)
     local raw_word=prefix:sub(word_start)
     if raw_word=="" then return end
 
+    -- Reconstruct the canonical Telex spelling from the displayed word so
+    -- sequences such as aa -> â can continue with a tone key: â + s -> ấ.
+    raw_word=to_canonical_telex(raw_word)
     local composed=M.compose(raw_word)
     if composed==raw_word then return end
 
