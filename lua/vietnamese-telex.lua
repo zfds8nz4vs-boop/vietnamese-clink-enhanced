@@ -341,9 +341,9 @@ local function make_key_handler(key)
     end
 end
 
-local function make_backspace_handler()
+local function make_backspace_handler(original_binding)
     return function(rl_buffer)
-        handle_backspace(rl_buffer)
+        handle_backspace(rl_buffer, original_binding)
     end
 end
 
@@ -370,12 +370,14 @@ local function install()
     -- the console/input path.  Bind both forms to the same semantic handler.
     backspace_binding=rl.getbinding([["\C-H"]])
     local backspace_name="vi_telex_backspace"
-    _G[backspace_name]=make_backspace_handler()
+    _G[backspace_name]=make_backspace_handler(backspace_binding)
     rl.setbinding([["\C-H"]],"luafunc:"..backspace_name)
 
     backspace_del_binding=rl.getbinding([["\C-?"]])
     if backspace_del_binding then
-        rl.setbinding([["\C-?"]],"luafunc:"..backspace_name)
+        local backspace_del_name="vi_telex_backspace_del"
+        _G[backspace_del_name]=make_backspace_handler(backspace_del_binding)
+        rl.setbinding([["\C-?"]],"luafunc:"..backspace_del_name)
     end
 
     -- Delete is deliberately only invalidated/delegated; semantic deletion
