@@ -67,6 +67,12 @@ local function utf8_chars(s)
     return out
 end
 
+local function utf8_without_last_char(s)
+    local chars=utf8_chars(s)
+    if #chars==0 then return "" end
+    chars[#chars]=nil
+    return table.concat(chars)
+end
 
 local canonical_base = {
     ["â"]="aa",["ă"]="aw",["ê"]="ee",["ô"]="oo",["ơ"]="ow",["ư"]="uw",["đ"]="dd",
@@ -102,7 +108,6 @@ local function normalize_raw(word)
     local chars=utf8_chars(word)
     local out={}
     local tone_id
-    local last=1
     for i,c in ipairs(chars) do
         if i==#chars and tone_marks[c] then
             tone_id=tone_marks[c]
@@ -126,7 +131,6 @@ local function normalize_raw(word)
         end
     end
 
-    -- A tone key only acts when the syllable has at least one vowel.
     if tone_id then
         local has_vowel=false
         for _,c in ipairs(mod) do if vowels[c] then has_vowel=true break end end
@@ -136,18 +140,12 @@ local function normalize_raw(word)
 end
 
 local lower_vowel = {
-    ["A"]="a", ["Ă"]="ă", ["Â"]="â", ["E"]="e", ["Ê"]="ê", ["I"]="i",
-    ["O"]="o", ["Ô"]="ô", ["Ơ"]="ơ", ["U"]="u", ["Ư"]="ư", ["Y"]="y",
+    ["A"]="a",["Ă"]="ă",["Â"]="â",["E"]="e",["Ê"]="ê",["I"]="i",
+    ["O"]="o",["Ô"]="ô",["Ơ"]="ơ",["U"]="u",["Ư"]="ư",["Y"]="y",
 }
-
-local function vowel_lower(c)
-    return lower_vowel[c] or c
-end
+local function vowel_lower(c) return lower_vowel[c] or c end
 
 local function choose_tone_index(chars)
-    -- Vietnamese tone placement is based on the written vowel structure,
-    -- not simply on "the last vowel".  In particular, that naive rule turns
-    -- "ao/au/ai" into bad forms such as "aó/aú/aí".
     local idx={}
     for i,c in ipairs(chars) do
         if vowels[c] then idx[#idx+1]=i end
@@ -155,11 +153,7 @@ local function choose_tone_index(chars)
     if #idx==0 then return nil end
     if #idx==1 then return idx[1] end
 
-    -- gi- and qu- contain a spelling glide that must not receive the tone
-    -- when it is functioning as part of the initial consonant.
     local start=1
-    local first=vowel_lower(chars[idx[1]])
-    local second=vowel_lower(chars[idx[2]])
     local first_char=vowel_lower(chars[1] or "")
     local second_char=vowel_lower(chars[2] or "")
     if first_char=="g" and second_char=="i" then
@@ -169,101 +163,52 @@ local function choose_tone_index(chars)
     end
 
     local work={}
-    for n=start,#idx do
-        work[#work+1]=vowel_lower(chars[idx[n]])
-    end
+    for n=start,#idx do work[#work+1]=vowel_lower(chars[idx[n]]) end
     if #work==0 then return idx[1] end
-
     local seq=table.concat(work)
 
-    -- Three-vowel nuclei: the middle vowel carries the tone, except UYÊ,
-    -- where Ê is the main vowel.  These cover iêu/yêu, oai/oao/oay,
-    -- uây, uôi, uya, uyê, uơ/ưới/ươu families, etc.
     if #work==3 then
         local target=2
-        if seq=="uyê" then
-            target=3
-        elseif seq=="uây" then
-            target=2
-        elseif seq=="uyu" then
-            target=2
+        if seq=="uyê" then target=3
+        elseif seq=="uây" then target=2
+        elseif seq=="uyu" then target=2
         end
         return idx[start+target-1]
     end
 
-    -- Two-vowel nuclei whose second letter is the main vowel/glide boundary.
-    -- This includes oa/oe/uê/uâ/uy and the closed diphthongs iê/yê/uô/ươ.
     local second_tone={
-        oa=true, oe=true, uê=true, uâ=true, uy=true,
-        iê=true, yê=true, uô=true, ươ=true,
+        oa=true,oe=true,uê=true,uâ=true,uy=true,
+        iê=true,yê=true,uô=true,ươ=true,
     }
     if #work==2 then
-        if second_tone[seq] then
-            return idx[start+1]
-        end
-
-        -- The remaining common Vietnamese diphthongs take the tone on the
-        -- first vowel: ai, ao, au, ay, âu, ây, eo, êu, ia, iu, oi, ôi,
-        -- ơi, ua, ui, ưa, ưi, ưu.
+        if second_tone[seq] then return idx[start+1] end
         local first_tone={
-            ai=true, ao=true, au=true, ay=true, âu=true, ây=true,
-            eo=true, êu=true, ia=true, iu=true, oi=true, ôi=true,
-            ơi=true, ua=true, ui=true, ưa=true, ưi=true, ưu=true,
+            ai=true,ao=true,au=true,ay=true,âu=true,ây=true,
+            eo=true,êu=true,ia=true,iu=true,oi=true,ôi=true,
+            ơi=true,ua=true,ui=true,ưa=true,ưi=true,ưu=true,
         }
-        if first_tone[seq] then
-            return idx[start]
-        end
-
-        -- Unknown two-vowel sequences should fail conservatively toward the
-        -- first vowel rather than producing malformed forms like aó/aú/aí.
+        if first_tone[seq] then return idx[start] end
         return idx[start]
     end
-
-    -- Vietnamese orthography normally has at most three consecutive vowel
-    -- letters in a syllable.  For an unexpected longer sequence, choose the
-    -- central vowel rather than the final one.
     return idx[start+math.floor((#work-1)/2)]
 end
 
 local valid_onsets = {
     b=true,c=true,d=true,đ=true,g=true,h=true,k=true,l=true,m=true,n=true,p=true,
     q=true,r=true,s=true,t=true,v=true,x=true,
-    ch=true,gh=true,gi=true,kh=true,ng=true,ngh=true,nh=true,ph=true,
-    qu=true,th=true,tr=true,
+    ch=true,gh=true,gi=true,kh=true,ng=true,ngh=true,nh=true,ph=true,qu=true,th=true,tr=true,
     B=true,C=true,D=true,Đ=true,G=true,H=true,K=true,L=true,M=true,N=true,P=true,
     Q=true,R=true,S=true,T=true,V=true,X=true,
-    CH=true,GH=true,GI=true,KH=true,NG=true,NGH=true,NH=true,PH=true,
-    QU=true,TH=true,TR=true,
+    CH=true,GH=true,GI=true,KH=true,NG=true,NGH=true,NH=true,PH=true,QU=true,TH=true,TR=true,
 }
-
 local valid_nuclei = {
-    -- Single vowels.
-    a=true, ă=true, â=true, e=true, ê=true, i=true, o=true, ô=true, ơ=true,
-    u=true, ư=true, y=true,
-
-    -- Common open/closed diphthongs and vowel pairs.
-    ai=true, ao=true, au=true, ay=true, âu=true, ây=true,
-    eo=true, êu=true,
-    ia=true, iu=true,
-    oa=true, oe=true, oi=true, ôi=true, ơi=true,
-    ua=true, ui=true, ưa=true, ưi=true, ưu=true,
-    uê=true, uơ=true, uy=true,
-
-    -- Iê/uô/ươ families.
-    iê=true, yê=true, uô=true, ươ=true,
-
-    -- Common triphthongs.
-    oai=true, oay=true,
-    uai=true, uay=true, uây=true,
-    uoi=true, uôi=true,
-    ươi=true,
-    iêu=true, yêu=true,
-    uyê=true,
-    ươu=true,
-
-    -- A few valid orthographic sequences encountered in names/loanwords.
-    iau=true, ieu=true, yeu=true,
-    uya=true, uye=true, uyu=true,
+    a=true,ă=true,â=true,e=true,ê=true,i=true,o=true,ô=true,ơ=true,u=true,ư=true,y=true,
+    ai=true,ao=true,au=true,ay=true,âu=true,ây=true,eo=true,êu=true,ia=true,iu=true,
+    oa=true,oe=true,oi=true,ôi=true,ơi=true,ua=true,ui=true,ưa=true,ưi=true,ưu=true,
+    uê=true,uơ=true,uy=true,iê=true,yê=true,uô=true,ươ=true,
+    oai=true,oay=true,uai=true,uay=true,uây=true,uoi=true,uôi=true,ươi=true,
+    iêu=true,yêu=true,uyê=true,ươu=true,
+    iau=true,ieu=true,yeu=true,uya=true,uye=true,uyu=true,
 }
 local valid_codas = {
     c=true,ch=true,m=true,n=true,ng=true,nh=true,p=true,t=true,
@@ -271,14 +216,8 @@ local valid_codas = {
 }
 
 local function is_valid_tone_syllable(chars)
-    -- Validate onset + vowel nucleus + optional Vietnamese coda.  This is a
-    -- phonotactic guard, not a dictionary lookup: rejecting every unknown
-    -- word would also reject names, technical terms, slang, and new words.
-    local onset={}
-    local nucleus={}
-    local coda={}
+    local onset,nucleus,coda={}, {}, {}
     local seen_vowel=false
-
     for _,c in ipairs(chars) do
         if vowels[c] then
             if #coda>0 then return false end
@@ -290,30 +229,18 @@ local function is_valid_tone_syllable(chars)
             coda[#coda+1]=c
         end
     end
-
     if not seen_vowel then return false end
-
     local onset_s=table.concat(onset)
     local nucleus_s=table.concat(nucleus)
     local coda_s=table.concat(coda)
-
-    if onset_s~="" and not valid_onsets[onset_s] then
-        return false
-    end
-    if not valid_nuclei[nucleus_s] then
-        return false
-    end
-    if coda_s~="" and not valid_codas[coda_s] then
-        return false
-    end
+    if onset_s~="" and not valid_onsets[onset_s] then return false end
+    if not valid_nuclei[nucleus_s] then return false end
+    if coda_s~="" and not valid_codas[coda_s] then return false end
     return true
 end
 
 local function apply_tone(chars,tone_id)
-    if not tone_id then return chars end
-    if not is_valid_tone_syllable(chars) then
-        return chars
-    end
+    if not tone_id or not is_valid_tone_syllable(chars) then return chars end
     local pos=choose_tone_index(chars)
     if not pos then return chars end
     local c=chars[pos]
@@ -330,13 +257,42 @@ end
 
 local old_bindings={}
 local installed=false
+local composition=nil
+local backspace_binding=nil
+local backspace_del_binding=nil
 
--- Shadow the raw Telex keystrokes for the word currently being composed.
--- This lets Backspace undo a Telex keystroke instead of deleting the rendered
--- Vietnamese character as a whole (e.g. "aa" -> "â", then Backspace -> "a").
-local composition = nil
-local backspace_binding = nil
-local backspace_del_binding = nil
+-- Rapid repeated-key handling.
+--
+-- A normal Telex sequence still works:
+--     a a  -> â
+-- But when the same printable key is repeated very rapidly, as happens during
+-- keyboard auto-repeat, the engine switches that run to literal text:
+--     hold a -> aaaaa...
+--
+-- The switch is intentionally delayed until the third rapid repeated key so
+-- the fundamental "aa -> â" Telex rule is preserved for ordinary typing.
+local repeat_state={key=nil,last_time=nil,count=0,literal=false}
+local REPEAT_THRESHOLD=0.10
+
+local function reset_repeat_state()
+    repeat_state.key=nil
+    repeat_state.last_time=nil
+    repeat_state.count=0
+    repeat_state.literal=false
+end
+
+local function update_repeat_state(key)
+    local now=os.clock()
+    if repeat_state.key==key and repeat_state.last_time and (now-repeat_state.last_time)<=REPEAT_THRESHOLD then
+        repeat_state.count=repeat_state.count+1
+    else
+        repeat_state.key=key
+        repeat_state.count=1
+        repeat_state.literal=false
+    end
+    repeat_state.last_time=now
+    return repeat_state.literal or repeat_state.count>=3
+end
 
 local function is_letter_key(c)
     return c:match("^[A-Za-z]$") ~= nil
@@ -349,10 +305,8 @@ local function current_word_info(rl_buffer)
     local word_start=1
     local byte_pos=1
     for _,c in ipairs(utf8_chars(prefix)) do
-        local is_word = is_letter_key(c) or unaccent[c] ~= nil
-        if not is_word then
-            word_start=byte_pos+#c
-        end
+        local is_word=is_letter_key(c) or unaccent[c]~=nil
+        if not is_word then word_start=byte_pos+#c end
         byte_pos=byte_pos+#c
     end
     return line,cursor,prefix,word_start,prefix:sub(word_start)
@@ -360,29 +314,22 @@ end
 
 local function clear_composition()
     composition=nil
+    reset_repeat_state()
 end
 
 local function sync_composition(rl_buffer)
     local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
-    if displayed=="" or cursor ~= #prefix+1 then
+    if displayed=="" or cursor~=#prefix+1 then
         composition=nil
+        reset_repeat_state()
         return
     end
-
-    if composition
-       and composition.start==word_start
-       and composition.display==displayed then
-        return
-    end
-
-    composition={
-        start=word_start,
-        raw=to_canonical_telex(displayed),
-        display=displayed,
-    }
+    if composition and composition.start==word_start and composition.display==displayed then return end
+    composition={start=word_start,raw=to_canonical_telex(displayed),display=displayed}
+    reset_repeat_state()
 end
 
-local function replace_current_word(rl_buffer, start_pos, old_display, new_display)
+local function replace_current_word(rl_buffer,start_pos,old_display,new_display)
     local cursor=rl_buffer:getcursor()
     rl_buffer:beginundogroup()
     rl_buffer:remove(start_pos,cursor)
@@ -393,53 +340,75 @@ local function replace_current_word(rl_buffer, start_pos, old_display, new_displ
 end
 
 local function append_telex_key(raw,key)
-    -- Telex tone keys replace an existing trailing tone instead of stacking
-    -- tones: "asf" behaves as "af".  Z removes a trailing tone.
     if tone_marks[key] then
-        if raw:match("[sfrxj]$") then
-            return raw:sub(1,-2)..key
-        end
+        if raw:match("[sfrxj]$") then return raw:sub(1,-2)..key end
         return raw..key
     end
-    if key=="z" and raw:match("[sfrxj]$") then
-        return raw:sub(1,-2)
-    end
-    if key=="Z" and raw:match("[SFRXJ]$") then
-        return raw:sub(1,-2)
-    end
+    if key=="z" and raw:match("[sfrxj]$") then return raw:sub(1,-2) end
+    if key=="Z" and raw:match("[SFRXJ]$") then return raw:sub(1,-2) end
     return raw..key
 end
 
-local function handle_letter(rl_buffer,key)
+local function insert_literal_key(rl_buffer,key)
     local old=old_bindings[key]
-    if old then
-        rl.invokecommand(old)
-    else
-        rl_buffer:insert(key)
-    end
+    if old then rl.invokecommand(old) else rl_buffer:insert(key) end
+    composition=nil
+end
+
+local function handle_letter(rl_buffer,key)
+    local literal_repeat=update_repeat_state(key)
+
+    local old=old_bindings[key]
+    if old then rl.invokecommand(old) else rl_buffer:insert(key) end
 
     local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
-    if cursor ~= #prefix+1 then
+    if cursor~=#prefix+1 then
         clear_composition()
+        return
+    end
+
+    if literal_repeat then
+        -- Reconstruct the entire current run as literal ASCII.  This makes a
+        -- keyboard-held key stable instead of oscillating through â/ă/etc.
+        local run_count=repeat_state.count
+        local literal=string.rep(key:lower(),run_count)
+        if key:match("%u") then literal=string.rep(key,run_count) end
+        local previous_count=run_count-1
+        local old_display=displayed
+        local base_start=word_start
+
+        -- Keep any text that existed before this repeated run.
+        local previous_display=utf8_without_last_char(old_display)
+        if composition and composition.display and composition.display~="" then
+            previous_display=composition.display
+            -- For the third rapid key, composition currently contains the
+            -- rendered form of the first two keys; replace it by literal run.
+            if previous_count>=2 then previous_display="" end
+        end
+
+        if previous_count>=2 then
+            replace_current_word(rl_buffer,base_start,old_display,literal)
+        else
+            replace_current_word(rl_buffer,base_start,old_display,literal)
+        end
+        composition={start=base_start,raw=literal,display=literal}
         return
     end
 
     if composition
        and composition.start==word_start
-       and composition.display==displayed:sub(1,-2) then
+       and composition.display==utf8_without_last_char(displayed) then
         composition.raw=append_telex_key(composition.raw,key)
         composition.display=M.compose(composition.raw)
         replace_current_word(rl_buffer,word_start,displayed,composition.display)
         return
     end
 
-    -- If the word was not produced by our current composition state (for
-    -- example after paste/history/completion), rebuild a best-effort state
-    -- from the visible text and then accept the new key.
+    local previous_display=utf8_without_last_char(displayed)
     composition={
         start=word_start,
-        raw=to_canonical_telex(displayed:sub(1,-2)),
-        display=displayed:sub(1,-2),
+        raw=to_canonical_telex(previous_display),
+        display=previous_display,
     }
     composition.raw=append_telex_key(composition.raw,key)
     composition.display=M.compose(composition.raw)
@@ -453,100 +422,71 @@ local function handle_backspace(rl_buffer)
         if old then rl.invokecommand(old) end
         return
     end
-
     if composition.raw=="" then
         clear_composition()
         local old=old_bindings.__backspace
         if old then rl.invokecommand(old) end
         return
     end
-
-    composition.raw=composition.raw:sub(1,-2)
+    composition.raw=utf8_without_last_char(composition.raw)
     composition.display=M.compose(composition.raw)
-
     local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
     replace_current_word(rl_buffer,word_start,displayed,composition.display)
     if composition.display=="" then clear_composition() end
 end
 
 local function handle_delete(rl_buffer)
-    -- Delete in the middle of a word is delegated to Readline.  The shadow
-    -- state is invalidated because the raw Telex stream can no longer be
-    -- inferred safely after arbitrary cursor edits.
     clear_composition()
     local old=old_bindings.__delete
     if old then rl.invokecommand(old) end
 end
 
-local function transform_current_word(rl_buffer)
-    sync_composition(rl_buffer)
-    if not composition then return end
-
-    local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
-    if cursor ~= #prefix+1 then
-        clear_composition()
-        return
-    end
-
-    local composed=M.compose(composition.raw)
-    if composed==displayed then return end
-
-    composition.start=word_start
-    composition.display=composed
-    replace_current_word(rl_buffer,word_start,displayed,composed)
-end
-
 local function make_key_handler(key)
-    return function(rl_buffer)
-        handle_letter(rl_buffer,key)
-    end
+    return function(rl_buffer) handle_letter(rl_buffer,key) end
 end
 
-local function make_backspace_handler(original_binding)
-    return function(rl_buffer)
-        handle_backspace(rl_buffer, original_binding)
-    end
+local function make_backspace_handler()
+    return function(rl_buffer) handle_backspace(rl_buffer) end
 end
 
 local function make_delete_handler()
-    return function(rl_buffer)
-        handle_delete(rl_buffer)
-    end
+    return function(rl_buffer) handle_delete(rl_buffer) end
 end
 
 local function install()
     if installed then return end
     installed=true
 
+    local keymaps={"emacs","vi-insert"}
     for c in ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"):gmatch(".") do
-        local key=string.format("%q",c)
-        local old=rl.getbinding(key)
-        old_bindings[c]=old
+        old_bindings[c]=rl.getbinding(string.format("%q",c),"emacs")
         local name="vi_telex_key_"..c
         _G[name]=make_key_handler(c)
-        rl.setbinding(key,"luafunc:"..name)
+        for _,keymap in ipairs(keymaps) do
+            rl.setbinding(string.format("%q",c),"luafunc:"..name,keymap)
+        end
     end
 
-    -- Backspace is commonly reported as either Ctrl-H or DEL depending on
-    -- the console/input path.  Bind both forms to the same semantic handler.
-    backspace_binding=rl.getbinding([["\C-H"]])
-    local backspace_name="vi_telex_backspace"
-    _G[backspace_name]=make_backspace_handler(backspace_binding)
-    rl.setbinding([["\C-H"]],"luafunc:"..backspace_name)
+    for _,keymap in ipairs(keymaps) do
+        local old=rl.getbinding([[ "\C-H" ]],keymap)
+        if keymap=="emacs" then backspace_binding=old end
+        old_bindings.__backspace=old_bindings.__backspace or old
+        local name="vi_telex_backspace_"..keymap
+        _G[name]=make_backspace_handler()
+        rl.setbinding([[ "\C-H" ]],"luafunc:"..name,keymap)
 
-    backspace_del_binding=rl.getbinding([["\C-?"]])
-    if backspace_del_binding then
-        local backspace_del_name="vi_telex_backspace_del"
-        _G[backspace_del_name]=make_backspace_handler(backspace_del_binding)
-        rl.setbinding([["\C-?"]],"luafunc:"..backspace_del_name)
+        local old_del=rl.getbinding([[ "\C-?" ]],keymap)
+        if old_del then
+            local del_name="vi_telex_backspace_del_"..keymap
+            _G[del_name]=make_backspace_handler()
+            rl.setbinding([[ "\C-?" ]],"luafunc:"..del_name,keymap)
+        end
+
+        old_bindings.__delete=old_bindings.__delete or rl.getbinding([[ "\e[3~" ]],keymap)
+        local delete_name="vi_telex_delete_"..keymap
+        _G[delete_name]=make_delete_handler()
+        rl.setbinding([[ "\e[3~" ]],"luafunc:"..delete_name,keymap)
     end
-
-    -- Delete is deliberately only invalidated/delegated; semantic deletion
-    -- in the middle of a word is ambiguous without a full IME state model.
-    old_bindings.__delete=rl.getbinding([["\e[3~"]])
-    local delete_name="vi_telex_delete"
-    _G[delete_name]=make_delete_handler()
-    rl.setbinding([["\e[3~"]],"luafunc:"..delete_name)
 end
 
 clink.onbeginedit(install)
