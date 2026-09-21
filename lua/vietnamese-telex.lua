@@ -170,50 +170,184 @@ end
 local old_bindings={}
 local installed=false
 
-local function transform_current_word(rl_buffer)
+-- Shadow the raw Telex keystrokes for the word currently being composed.
+-- This lets Backspace undo a Telex keystroke instead of deleting the rendered
+-- Vietnamese character as a whole (e.g. "aa" -> "â", then Backspace -> "a").
+local composition = nil
+
+local function is_letter_key(c)
+    return c:match("^[A-Za-z]$") ~= nil
+end
+
+local function current_word_info(rl_buffer)
     local line=rl_buffer:getbuffer()
     local cursor=rl_buffer:getcursor()
     local prefix=line:sub(1,cursor-1)
-
     local word_start=1
     local byte_pos=1
     for _,c in ipairs(utf8_chars(prefix)) do
-        local is_word = c:match("^[A-Za-z]$") ~= nil or unaccent[c] ~= nil
+        local is_word = is_letter_key(c) or unaccent[c] ~= nil
         if not is_word then
             word_start=byte_pos+#c
         end
         byte_pos=byte_pos+#c
     end
+    return line,cursor,prefix,word_start,prefix:sub(word_start)
+end
 
-    local raw_word=prefix:sub(word_start)
-    if raw_word=="" then return end
+local function clear_composition()
+    composition=nil
+end
 
-    -- Only compose while the cursor is at the end of the current word.
-    -- This prevents ordinary cursor editing from unexpectedly rewriting text.
-    if cursor ~= #prefix + 1 then return end
+local function sync_composition(rl_buffer)
+    local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
+    if displayed=="" or cursor ~= #prefix+1 then
+        composition=nil
+        return
+    end
 
-    -- Reconstruct canonical Telex spelling while preserving an existing tone.
-    raw_word=to_canonical_telex(raw_word)
-    local composed=M.compose(raw_word)
-    if composed==raw_word then return end
+    if composition
+       and composition.start==word_start
+       and composition.display==displayed then
+        return
+    end
 
+    composition={
+        start=word_start,
+        raw=to_canonical_telex(displayed),
+        display=displayed,
+    }
+end
+
+local function replace_current_word(rl_buffer, start_pos, old_display, new_display)
+    local cursor=rl_buffer:getcursor()
     rl_buffer:beginundogroup()
-    rl_buffer:remove(word_start,cursor)
-    rl_buffer:setcursor(word_start)
-    rl_buffer:insert(composed)
-    rl_buffer:setcursor(word_start+#composed)
+    rl_buffer:remove(start_pos,cursor)
+    rl_buffer:setcursor(start_pos)
+    rl_buffer:insert(new_display)
+    rl_buffer:setcursor(start_pos+#new_display)
     rl_buffer:endundogroup()
+end
+
+local function append_telex_key(raw,key)
+    -- Telex tone keys replace an existing trailing tone instead of stacking
+    -- tones: "asf" behaves as "af".  Z removes a trailing tone.
+    if tone_marks[key] then
+        if raw:match("[sfrxj]$") then
+            return raw:sub(1,-2)..key
+        end
+        return raw..key
+    end
+    if key=="z" and raw:match("[sfrxj]$") then
+        return raw:sub(1,-2)
+    end
+    if key=="Z" and raw:match("[SFRXJ]$") then
+        return raw:sub(1,-2)
+    end
+    return raw..key
+end
+
+local function handle_letter(rl_buffer,key)
+    local old=old_bindings[key]
+    if old then
+        rl.invokecommand(old)
+    else
+        rl_buffer:insert(key)
+    end
+
+    local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
+    if cursor ~= #prefix+1 then
+        clear_composition()
+        return
+    end
+
+    if composition
+       and composition.start==word_start
+       and composition.display==displayed:sub(1,-2) then
+        composition.raw=append_telex_key(composition.raw,key)
+        composition.display=M.compose(composition.raw)
+        replace_current_word(rl_buffer,word_start,displayed,composition.display)
+        return
+    end
+
+    -- If the word was not produced by our current composition state (for
+    -- example after paste/history/completion), rebuild a best-effort state
+    -- from the visible text and then accept the new key.
+    composition={
+        start=word_start,
+        raw=to_canonical_telex(displayed:sub(1,-2)),
+        display=displayed:sub(1,-2),
+    }
+    composition.raw=append_telex_key(composition.raw,key)
+    composition.display=M.compose(composition.raw)
+    replace_current_word(rl_buffer,word_start,displayed,composition.display)
+end
+
+local function handle_backspace(rl_buffer)
+    sync_composition(rl_buffer)
+    if not composition then
+        local old=old_bindings.__backspace
+        if old then rl.invokecommand(old) end
+        return
+    end
+
+    if composition.raw=="" then
+        clear_composition()
+        local old=old_bindings.__backspace
+        if old then rl.invokecommand(old) end
+        return
+    end
+
+    composition.raw=composition.raw:sub(1,-2)
+    composition.display=M.compose(composition.raw)
+
+    local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
+    replace_current_word(rl_buffer,word_start,displayed,composition.display)
+    if composition.display=="" then clear_composition() end
+end
+
+local function handle_delete(rl_buffer)
+    -- Delete in the middle of a word is delegated to Readline.  The shadow
+    -- state is invalidated because the raw Telex stream can no longer be
+    -- inferred safely after arbitrary cursor edits.
+    clear_composition()
+    local old=old_bindings.__delete
+    if old then rl.invokecommand(old) end
+end
+
+local function transform_current_word(rl_buffer)
+    sync_composition(rl_buffer)
+    if not composition then return end
+
+    local line,cursor,prefix,word_start,displayed=current_word_info(rl_buffer)
+    if cursor ~= #prefix+1 then
+        clear_composition()
+        return
+    end
+
+    local composed=M.compose(composition.raw)
+    if composed==displayed then return end
+
+    composition.start=word_start
+    composition.display=composed
+    replace_current_word(rl_buffer,word_start,displayed,composed)
 end
 
 local function make_key_handler(key)
     return function(rl_buffer)
-        local old=old_bindings[key]
-        if old then
-            rl.invokecommand(old)
-        else
-            rl_buffer:insert(key)
-        end
-        transform_current_word(rl_buffer)
+        handle_letter(rl_buffer,key)
+    end
+end
+
+local function make_backspace_handler()
+    return function(rl_buffer)
+        handle_backspace(rl_buffer)
+    end
+end
+
+local function make_delete_handler()
+    return function(rl_buffer)
+        handle_delete(rl_buffer)
     end
 end
 
@@ -229,6 +363,26 @@ local function install()
         _G[name]=make_key_handler(c)
         rl.setbinding(key,"luafunc:"..name)
     end
+
+    -- Backspace is commonly reported as either Ctrl-H or DEL depending on
+    -- the console/input path.  Bind both forms to the same semantic handler.
+    old_bindings.__backspace=rl.getbinding([["\C-H"]])
+    local backspace_name="vi_telex_backspace"
+    _G[backspace_name]=make_backspace_handler()
+    rl.setbinding([["\C-H"]],"luafunc:"..backspace_name)
+
+    local old_del=rl.getbinding([["\C-?"]])
+    if old_del then
+        old_bindings.__backspace=old_del
+        rl.setbinding([["\C-?"]],"luafunc:"..backspace_name)
+    end
+
+    -- Delete is deliberately only invalidated/delegated; semantic deletion
+    -- in the middle of a word is ambiguous without a full IME state model.
+    old_bindings.__delete=rl.getbinding([["\e[3~"]])
+    local delete_name="vi_telex_delete"
+    _G[delete_name]=make_delete_handler()
+    rl.setbinding([["\e[3~"]],"luafunc:"..delete_name)
 end
 
 clink.onbeginedit(install)
