@@ -14,5 +14,5 @@ class TelexRulesTest(unittest.TestCase):
         self.assertEqual(self.telex("tiếng"),"tieengs")
         self.assertEqual(self.telex("Việt"),"Vieejt")
         self.assertEqual(self.telex("đường"),"dduowngf")
-        self.assertEqual(self.telex("TÔI"),"TOOIS")
+        self.assertEqual(self.telex("TÔI"),"TOOI")
 if __name__=="__main__": unittest.main()
