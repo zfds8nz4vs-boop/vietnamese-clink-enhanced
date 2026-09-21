@@ -50,3 +50,11 @@ The upstream project identifies the generated frequency data as CC BY-SA 4.0. Th
 ## Next step
 
 The pack can be expanded to the complete Vietnamese source, then a licensed sentence corpus can be added to build `vi.cngm`. A separate Clink-side Telex input method would require support in Clink for keystroke-to-Vietnamese composition; the language-pack dictionary alone cannot provide that behavior.
+
+## Reproducible full-data build
+
+The repository now includes the same CLEX/CNGM build logic used by the upstream Clink language-pack project, plus a GitHub Actions workflow. The workflow fetches the pinned Vietnamese FrequencyWords 2018 source and the Tatoeba Vietnamese sentence export, builds `vi.clex` and `vi.cngm`, validates both, and uploads them as a workflow artifact.
+
+The checked-in `Lexicons/vi.clex` remains the small bootstrap build from the initial source snapshot. The full 50k + sentence build is intentionally generated in CI rather than committing a large, automatically downloaded corpus to the repository.
+
+Tatoeba publishes sentence exports under CC BY 2.0 FR; FrequencyWords' generated unigram data is CC BY-SA 4.0. The build keeps those provenance boundaries explicit.
