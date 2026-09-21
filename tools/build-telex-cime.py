@@ -24,12 +24,19 @@ def telex_char(ch):
     tone=next((TONE[m] for m in ("\u0301","\u0300","\u0309","\u0303","\u0323") if m in marks),None)
     return shape,tone
 def telex_syllable(text):
-    out=[]; tone=None
+    parts=[]; tone=None
     for ch in text:
         shape,ch_tone=telex_char(ch)
-        out.append(shape)
+        base=unicodedata.normalize("NFD",ch)[0].lower()
+        parts.append((shape,base in "aeiouy"))
         if ch_tone: tone=ch_tone
-    return "".join(out)+(tone or "")
+    if not tone: return "".join(shape for shape,_ in parts)
+    last_vowel=-1
+    for i,(_,is_vowel) in enumerate(parts):
+        if is_vowel: last_vowel=i
+    if last_vowel < 0: return "".join(shape for shape,_ in parts)+tone
+    return "".join(shape for shape,_ in parts[:last_vowel+1])+tone+"".join(shape for shape,_ in parts[last_vowel+1:])
+
 def telex_word(word):
     out=[]; buf=[]
     for ch in unicodedata.normalize("NFC",word):
