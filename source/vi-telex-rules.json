@@ -1,0 +1,1 @@
+{"schema":1,"language":"Vietnamese","locale":"vi-VN","method":"Telex","shape":{"aa":"â","aw":"ă","ee":"ê","oo":"ô","ow":"ơ","uw":"ư","dd":"đ"},"tones":{"s":"sắc","f":"huyền","r":"hỏi","x":"ngã","j":"nặng","z":"remove tone"},"uppercase":true,"repeated_key_policy":"ordinary double keys compose; rapid long runs are treated as literal ASCII by the interactive rule specification."}
