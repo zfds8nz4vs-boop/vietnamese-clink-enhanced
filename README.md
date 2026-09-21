@@ -1,86 +1,78 @@
-# Vietnamese Clink Enhanced
+# Clink Vietnamese — Telex language pack
 
-Vietnamese language resources for Clink, with a UniKey-compatible Telex reference.
+Independent community Vietnamese language pack for Clink, modeled on the
+resource/build/release structure of the community Chinese pack
+dayifulalala-del/clink-chinese.
 
-## Included
+## Package
 
-- `Lexicons/vi.clex` — Clink CLEX v1 dictionary generated from the first 1,000 entries of the pinned 2018 Vietnamese FrequencyWords list, including source frequencies.
-- `Lexicons/vi.emoji.json` — Vietnamese emoji aliases and stopwords.
-- `source/vi.txt` — reproducible word/frequency source snapshot.
-- `source/unikey-telex-keymap.txt` — Telex mapping documented by the supplied UniKey package.
-- `NOTICE.md` — provenance and licensing notes.
+The release contains:
 
-## UniKey relationship
+- vi.clex — Vietnamese frequency dictionary.
+- vi.cngm — next-word model from Tatoeba Vietnamese sentences.
+- vi.cime — generated Vietnamese Telex reading table.
+- vi.emoji.json — Vietnamese emoji aliases.
+- manifest.json — release manifest with SHA-256 checksums.
+- README.md, NOTICE.md, LICENSE.md and RELEASE-NOTES.md.
 
-The supplied UniKey 4.6 RC2 Windows archive contains `UniKeyNT.exe` and `keymap.txt`; it does **not** contain the UniKey source code. This project therefore does not redistribute or embed `UniKeyNT.exe`.
+The build uses Python. PowerShell and shell scripts provide repeatable local
+maintenance and publishing helpers. The Lua adapter from earlier experiments
+has been removed.
 
-The Telex mapping documented here is:
+## Telex rules
 
-- `s` tone 1
-- `f` tone 2
-- `r` tone 3
-- `x` tone 4
-- `j` tone 5
-- `z` remove tone
-- `w` hook-bowl
-- `a/e/o` roof
-- `d` D-mark
+The established rules are preserved:
 
-This mapping is included for compatibility/reference. A Clink `.clex` dictionary does not itself implement the keystroke transformation performed by a Vietnamese IME.
+- aa -> â
+- aw -> ă
+- ee -> ê
+- oo -> ô
+- ow -> ơ
+- uw -> ư
+- dd -> đ
+- s/f/r/x/j -> sắc/huyền/hỏi/ngã/nặng
+- z -> remove the current tone
+- uppercase shape and tone forms are supported.
 
-## Build status
+The repository also keeps the earlier regression coverage for word boundaries,
+tone placement, valid Vietnamese syllable/coda handling, repeated keys and
+UTF-8-safe editing in the development history. The packaged CIME is generated
+from the same Telex rules instead of embedding a Lua hook.
 
-This first commit is an MVP dictionary pack:
+Important: Python, PowerShell and shell do not execute as the interactive
+keystroke engine. They build and package the data. The runtime consumer must
+support the Clink CIME language-pack resource for the generated table to be
+used.
 
-- 978 normalized usable entries from the first 1,000 source rows.
-- CLEX v1 binary compiled and committed as `Lexicons/vi.clex`.
-- Vietnamese emoji metadata included.
-- UniKey Telex mapping documented separately.
-- No `.cngm` next-word model yet, because a redistributable Vietnamese sentence corpus has not been pinned and reviewed.
-- No `.cime` file: Clink's `.cime` format is intended for reading-to-character IMEs such as Pinyin → Hanzi, not for implementing Telex transformation.
+## Build locally
 
-## Data provenance
+    python3 tools/fetch-vietnamese-sources.py
+    python3 tools/build-pack.py vi source/vi_50k.txt
+    python3 tools/build-next-word.py vi source/vi_50k.txt source/vie_sentences.tsv
+    python3 tools/build-telex-cime.py vi source/vi_50k.txt
+    python3 tools/validate-pack.py vi
+    python3 tools/validate-catalog.py
+    python3 -m unittest discover -s tools -p 'test_*.py' -v
 
-The dictionary source is Hermit Dave's FrequencyWords 2018 Vietnamese list:
+On Windows PowerShell, use python instead of python3 where appropriate.
 
-https://github.com/hermitdave/FrequencyWords/blob/master/content/2018/vi/vi_50k.txt
+## Sources and licensing
 
-The upstream project identifies the generated frequency data as CC BY-SA 4.0. The source snapshot and attribution are retained so the generated CLEX resource can be traced back to its input.
+The dictionary source is FrequencyWords Vietnamese 2018, distributed under
+CC BY-SA 4.0. The next-word source is the Tatoeba Vietnamese sentence export,
+which is distributed under CC BY 2.0 FR with some CC0 material. The pack
+tooling is independent and documents its provenance in catalog/ and NOTICE.md.
 
-## Next step
+This repository does not contain the UniKey source code or claim to be the
+UniKey engine. The earlier uploaded UniKey binary/keymap was used only as a
+reference for the Telex rule work; the current package is a Clink language
+pack built from documented resources.
 
-The pack can be expanded to the complete Vietnamese source, then a licensed sentence corpus can be added to build `vi.cngm`. A separate Clink-side Telex input method would require support in Clink for keystroke-to-Vietnamese composition; the language-pack dictionary alone cannot provide that behavior.
+## Release
 
-## Reproducible full-data build
+GitHub Actions fetches the pinned sources, builds all four vi.* resources,
+validates them, computes SHA-256 hashes, and publishes an immutable release.
+The release tag for this generation is vvi-official-4-1.
 
-The repository now includes the same CLEX/CNGM build logic used by the upstream Clink language-pack project, plus a GitHub Actions workflow. The workflow fetches the pinned Vietnamese FrequencyWords 2018 source and the Tatoeba Vietnamese sentence export, builds `vi.clex` and `vi.cngm`, validates both, and uploads them as a workflow artifact.
-
-The checked-in `Lexicons/vi.clex` remains the small bootstrap build from the initial source snapshot. The full 50k + sentence build is intentionally generated in CI rather than committing a large, automatically downloaded corpus to the repository.
-
-Tatoeba publishes sentence exports under CC BY 2.0 FR; FrequencyWords' generated unigram data is CC BY-SA 4.0. The build keeps those provenance boundaries explicit.
-
-## Telex input engine
-
-The repository now includes `lua/vietnamese-telex.lua`, a Clink-side Telex prototype. It uses Clink's Lua key-binding and `rl_buffer` APIs to transform printable letters while the command line is being edited. This is separate from `vi.clex`: the dictionary supports language data/completion, while the Lua layer performs Telex composition.
-
-Implemented in this first input-engine pass:
-
-- `s f r x j` tone keys;
-- `z` tone removal;
-- `aa aw ee oo ow uw dd` modifiers;
-- uppercase modifier support;
-- incremental composition (for example `aa` → `â`, then `s` → `ấ`);
-- common tone-placement heuristics;
-- undo grouping for each transformation;
-- a regression-case file at `tests/telex_cases.txt`.
-
-Clink exposes `rl.setbinding()`, `rl.getbinding()`, and the `rl_buffer` editing methods needed for this approach. The upstream Clink API documentation/source confirms that Lua key bindings can invoke functions and that `rl_buffer` can read, insert, remove, and reposition text.
-
-### Prototype limitations
-
-This is not yet a complete UniKey-equivalent IME. The next hardening pass should cover Backspace/Delete re-composition, cursor movement into the middle of a word, selections, all Vietnamese tone-placement rules, punctuation boundaries, Vi keymaps, and extensive regression testing against expected UniKey behavior.
-
-### Installing the prototype
-
-Copy `lua/vietnamese-telex.lua` into the Clink Lua scripts/profile directory and start a new Clink session. The script installs printable-letter bindings at the beginning of an edit session.
-
+A successful GitHub Actions run proves package construction and validation; it
+does not by itself prove activation on a particular device or Clink client.
