@@ -79,21 +79,34 @@ def vowel_label(ch):
     return base
 
 def choose_tone_index(chars):
+    """Return the Vietnamese-standard vowel position for a tone mark."""
     vowels=[i for i,c in enumerate(chars) if vowel_label(c) in VOWELS]
-    if not vowels: return None
-    if len(vowels)==1: return vowels[0]
-    vals=[vowel_label(chars[i]) for i in vowels]
-    if "".join(chars[:2]).lower() in ("gi","qu"):
-        vals=vals[1:]; vowels=vowels[1:]
-    seq="".join(vals)
-    if len(vals)==3:
-        if seq=="uyê": return vowels[2]
-        return vowels[1]
-    second={"oa","oe","uê","uâ","uy","iê","yê","uô","ươ"}
-    first={"ai","ao","au","ay","âu","ây","eo","êu","ia","iu","oi","ôi","ơi","ua","ui","ưa","ưi","ưu"}
-    if len(vals)==2:
-        return vowels[1] if seq in second else vowels[0]
-    return vowels[(len(vowels)-1)//2]
+    if not vowels:
+        return None
+
+    # In initial gi-/qu-, i/u belongs to the initial consonant cluster.
+    if "".join(chars[:2]).lower() in ("gi","qu") and len(vowels) > 1:
+        vowels=vowels[1:]
+
+    # A Vietnamese shape-marked vowel is the nucleus. This handles iê/uô/ươ
+    # and forms such as hoàng, ngoằn, chuyền, etc.
+    marked=[i for i in vowels if vowel_label(chars[i]) in "ăâêôơư"]
+    if marked:
+        return marked[-1] if len(marked) > 1 else marked[0]
+
+    if len(vowels)==1:
+        return vowels[0]
+
+    labels=[vowel_label(chars[i]) for i in vowels]
+
+    # Standard spelling puts the tone on the final vowel in oa/oe/uy:
+    # hoà, hoè, huỷ, quý, ...
+    if len(labels)>=2 and "".join(labels[-2:]) in ("oa","oe","uy"):
+        return vowels[-1]
+
+    # Other two/three-vowel nuclei take the tone on the penultimate vowel:
+    # bài, mía, của, ngoáy, ngoáo, ...
+    return vowels[-2]
 
 def tone_reading(word):
     chars=list(unicodedata.normalize("NFC",word))
