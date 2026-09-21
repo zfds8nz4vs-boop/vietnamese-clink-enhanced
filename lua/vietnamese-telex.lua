@@ -244,25 +244,29 @@ local valid_nuclei = {
     uâ=true, uây=true, ươu=true,
 }
 
+local valid_codas = {
+    c=true,ch=true,m=true,n=true,ng=true,nh=true,p=true,t=true,
+    C=true,CH=true,M=true,N=true,NG=true,NH=true,P=true,T=true,
+}
+
 local function is_valid_tone_syllable(chars)
-    -- Tone placement should not turn arbitrary ASCII/consonant sequences into
-    -- something that merely looks Vietnamese.  We validate the syllable's
-    -- onset and vowel nucleus, while deliberately not requiring a dictionary
-    -- hit: Vietnamese freely accepts names, technical terms, and new words.
+    -- Validate onset + vowel nucleus + optional Vietnamese coda.  This is a
+    -- phonotactic guard, not a dictionary lookup: rejecting every unknown
+    -- word would also reject names, technical terms, slang, and new words.
     local onset={}
     local nucleus={}
+    local coda={}
     local seen_vowel=false
 
     for _,c in ipairs(chars) do
         if vowels[c] then
+            if #coda>0 then return false end
             seen_vowel=true
             nucleus[#nucleus+1]=vowel_lower(c)
         elseif not seen_vowel then
             onset[#onset+1]=c
         else
-            -- A Vietnamese syllable cannot have another consonant after the
-            -- vowel nucleus in this simplified spelling validator.
-            return false
+            coda[#coda+1]=c
         end
     end
 
@@ -270,11 +274,15 @@ local function is_valid_tone_syllable(chars)
 
     local onset_s=table.concat(onset)
     local nucleus_s=table.concat(nucleus)
+    local coda_s=table.concat(coda)
 
     if onset_s~="" and not valid_onsets[onset_s] then
         return false
     end
     if not valid_nuclei[nucleus_s] then
+        return false
+    end
+    if coda_s~="" and not valid_codas[coda_s] then
         return false
     end
     return true
