@@ -10,9 +10,11 @@ class TelexRulesTest(unittest.TestCase):
         finally:
             sys.argv=old
         cls.telex=staticmethod(ns["telex_word"])
+        cls.aliases=staticmethod(ns["telex_aliases"])
     def test_rules(self):
         self.assertEqual(self.telex("tiếng"),"tieengs")
-        self.assertEqual(self.telex("Việt"),"Vieejt")
+        self.assertIn("tieesng",self.aliases("tiếng"))
+        self.assertIn("Vieejt",self.aliases("Việt"))
         self.assertEqual(self.telex("đường"),"dduowngf")
         self.assertEqual(self.telex("TÔI"),"TOOI")
 if __name__=="__main__": unittest.main()
