@@ -18,3 +18,6 @@ Those scripts do not execute in the interactive Clink input path.
 This is a community implementation. CNGM/CIME compatibility is based on the
 documented pack formats used by the reference repository; successful CI does
 not by itself prove activation in every client.
+
+
+CI packaging retry: Telex Unicode decomposition and tone placement are validated by regression tests before release publication.
