@@ -54,21 +54,21 @@ jobs:
           python3 -m unittest discover -s tools -p 'test_*.py' -v
       - name: Build release manifest
         env:
-          VERSION: \${{ github.event.inputs.tag || format('vvi-official-{0}-{1}', github.run_number, github.run_attempt) }}
+          VERSION: ${{ github.event.inputs.tag || format('vvi-official-{0}-{1}', github.run_number, github.run_attempt) }}
         run: |
           set -euo pipefail
           python3 tools/build-release-manifest.py "$VERSION" "$GITHUB_REPOSITORY" out
           cp README.md NOTICE.md LICENSE.md RELEASE-NOTES.md out/
       - name: Publish immutable draft
         env:
-          GH_TOKEN: \${{ github.token }}
-          VERSION: \${{ github.event.inputs.tag || format('vvi-official-{0}-{1}', github.run_number, github.run_attempt) }}
-          PRERELEASE: \${{ github.event.inputs.prerelease || 'false' }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.event.inputs.tag || format('vvi-official-{0}-{1}', github.run_number, github.run_attempt) }}
+          PRERELEASE: ${{ github.event.inputs.prerelease || 'false' }}
         run: |
           set -euo pipefail
           if gh release view "$VERSION" >/dev/null 2>&1; then echo "Release already exists"; exit 1; fi
           args=(gh release create "$VERSION" --target "$GITHUB_SHA" --draft --title "Clink Vietnamese · Telex · $VERSION" --notes-file RELEASE-NOTES.md)
           if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); fi
-          "\${args[@]}"
+          "${args[@]}"
           gh release upload "$VERSION" out/assets/* out/manifest.json README.md NOTICE.md LICENSE.md RELEASE-NOTES.md
           gh release edit "$VERSION" --draft=false
