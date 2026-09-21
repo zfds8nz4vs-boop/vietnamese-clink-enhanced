@@ -11,7 +11,7 @@ class TelexRulesTest(unittest.TestCase):
         finally:
             sys.argv=old
         cls.telex=staticmethod(ns["telex_word"])
-        cls.aliases=staticmethod(ns["telex_aliases"])
+        cls.aliases=staticmethod(ns["telex_aliases"])\n        cls.rows=ns["rows"]
 
     def test_tone_position_matrix(self):
         # Canonical Telex: tone key at the end of the syllable.
@@ -66,7 +66,7 @@ class TelexRulesTest(unittest.TestCase):
             "chiều":"chieefu",
             "chuối":"chuoos i".replace(" ",""),
             "mười":"muoif",
-            "nước":"nuoocs",
+            "nước":"nuowsc",
             "biển":"bieens",
             "quyền":"quyeefn",
         }
