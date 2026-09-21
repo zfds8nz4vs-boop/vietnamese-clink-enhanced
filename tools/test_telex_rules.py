@@ -1,9 +1,14 @@
-import unittest,runpy
+import unittest,runpy,sys
 from pathlib import Path
 class TelexRulesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        ns=runpy.run_path(str(Path(__file__).with_name("build-telex-cime.py")),run_name="__test__")
+        old=sys.argv
+        try:
+            sys.argv=["build-telex-cime.py","vi","source/vi.txt"]
+            ns=runpy.run_path(str(Path(__file__).with_name("build-telex-cime.py")),run_name="__test__")
+        finally:
+            sys.argv=old
         cls.telex=ns["telex_word"]
     def test_rules(self):
         self.assertEqual(self.telex("tiếng"),"tieengs")
