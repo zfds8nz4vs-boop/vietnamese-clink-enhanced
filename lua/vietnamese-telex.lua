@@ -135,7 +135,18 @@ local function normalize_raw(word)
     return mod,tone_id
 end
 
+local lower_vowel = {
+    A="a", Ă="ă", Â="â", E="e", Ê="ê", I="i", O="o", Ô="ô", Ơ="ơ", U="u", Ư="ư", Y="y",
+}
+
+local function vowel_lower(c)
+    return lower_vowel[c] or c
+end
+
 local function choose_tone_index(chars)
+    -- Vietnamese tone placement is based on the written vowel structure,
+    -- not simply on "the last vowel".  In particular, that naive rule turns
+    -- "ao/au/ai" into bad forms such as "aó/aú/aí".
     local idx={}
     for i,c in ipairs(chars) do
         if vowels[c] then idx[#idx+1]=i end
@@ -143,12 +154,68 @@ local function choose_tone_index(chars)
     if #idx==0 then return nil end
     if #idx==1 then return idx[1] end
 
-    local first,last=chars[idx[1]],chars[idx[#idx]]
-    if #idx==2 and (first=="i" or first=="I" or first=="u" or first=="U" or first=="ư" or first=="Ư")
-       and (last=="a" or last=="A") then
-        return idx[1]
+    -- gi- and qu- contain a spelling glide that must not receive the tone
+    -- when it is functioning as part of the initial consonant.
+    local start=1
+    local first=vowel_lower(chars[idx[1]])
+    local second=vowel_lower(chars[idx[2]])
+    local first_char=vowel_lower(chars[1] or "")
+    local second_char=vowel_lower(chars[2] or "")
+    if first_char=="g" and second_char=="i" then
+        start=2
+    elseif first_char=="q" and second_char=="u" then
+        start=2
     end
-    return idx[#idx]
+
+    local work={}
+    for n=start,#idx do
+        work[#work+1]=vowel_lower(chars[idx[n]])
+    end
+    if #work==0 then return idx[1] end
+
+    local seq=table.concat(work)
+
+    -- Three-vowel nuclei: the middle vowel carries the tone, except UYÊ,
+    -- where Ê is the main vowel.  These cover iêu/yêu, oai/oao/oay,
+    -- uây, uôi, uya, uyê, uơ/ưới/ươu families, etc.
+    if #work==3 then
+        local target=2
+        if seq=="uyê" then target=3 end
+        return idx[start+target-1]
+    end
+
+    -- Two-vowel nuclei whose second letter is the main vowel/glide boundary.
+    -- This includes oa/oe/uê/uâ/uy and the closed diphthongs iê/yê/uô/ươ.
+    local second_tone={
+        oa=true, oe=true, uê=true, uâ=true, uy=true,
+        iê=true, yê=true, uô=true, ươ=true,
+    }
+    if #work==2 then
+        if second_tone[seq] then
+            return idx[start+1]
+        end
+
+        -- The remaining common Vietnamese diphthongs take the tone on the
+        -- first vowel: ai, ao, au, ay, âu, ây, eo, êu, ia, iu, oi, ôi,
+        -- ơi, ua, ui, ưa, ưi, ưu.
+        local first_tone={
+            ai=true, ao=true, au=true, ay=true, âu=true, ây=true,
+            eo=true, êu=true, ia=true, iu=true, oi=true, ôi=true,
+            ơi=true, ua=true, ui=true, ưa=true, ưi=true, ưu=true,
+        }
+        if first_tone[seq] then
+            return idx[start]
+        end
+
+        -- Unknown two-vowel sequences should fail conservatively toward the
+        -- first vowel rather than producing malformed forms like aó/aú/aí.
+        return idx[start]
+    end
+
+    -- Vietnamese orthography normally has at most three consecutive vowel
+    -- letters in a syllable.  For an unexpected longer sequence, choose the
+    -- central vowel rather than the final one.
+    return idx[start+math.floor((#work-1)/2)]
 end
 
 local function apply_tone(chars,tone_id)
