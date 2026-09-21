@@ -7,7 +7,7 @@ weekly export path. The downloaded files are build inputs, not application code.
 from pathlib import Path
 from urllib.request import urlopen
 
-FREQUENCY_COMMIT = "525f9b560de45753a5ea010694e72e9aa541c6"
+FREQUENCY_COMMIT = "525f9b560de45753a5ea01069454e72e9aa541c6"
 FREQUENCY_URL = (
     "https://raw.githubusercontent.com/hermitdave/FrequencyWords/"
     f"{FREQUENCY_COMMIT}/content/2018/vi/vi_50k.txt"
