@@ -41,7 +41,7 @@ def telex_syllable_end(text):
         shape,ch_tone=telex_char(ch)
         parts.append(shape)
         if ch_tone: tone=ch_tone
-    return "".join(parts)+(tone or "")
+    return "".join(parts).replace("uwow","uow").replace("UWOW","UOW")+(tone or "")
 
 def _map_word(word, syllable_fn):
     out=[]; buf=[]
