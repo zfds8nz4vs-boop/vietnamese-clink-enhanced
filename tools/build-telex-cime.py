@@ -46,6 +46,16 @@ def _map_syllable(text, tone_before_coda=False):
     if last<0: return raw+tone
     return "".join(shape for shape,_ in parts[:last+1])+tone+"".join(shape for shape,_ in parts[last+1:])
 
+def _map_word(word, syllable_fn):
+    out=[]; buf=[]
+    for ch in unicodedata.normalize("NFC",word):
+        if ch.isalpha(): buf.append(ch)
+        else:
+            if buf: out.append(syllable_fn("".join(buf))); buf=[]
+            out.append(ch)
+    if buf: out.append(syllable_fn("".join(buf)))
+    return "".join(out)
+
 def telex_plain_syllable(text):
     return _map_syllable(text)
 
