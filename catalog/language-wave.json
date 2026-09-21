@@ -1,0 +1,15 @@
+{
+  "schema":1,
+  "attribution":[
+    {"name":"FrequencyWords / OpenSubtitles 2018","license":"CC-BY-SA-4.0","url":"https://github.com/hermitdave/FrequencyWords"},
+    {"name":"Tatoeba sentence exports","license":"CC-BY-2.0-FR","url":"https://tatoeba.org/en/downloads"},
+    {"name":"Clink language-pack tooling","license":"GPL-3.0","url":"https://github.com/anti-ltd/clink-language-packs"}
+  ],
+  "packs":[{
+    "code":"vi","status":"complete",
+    "sources":["https://github.com/hermitdave/FrequencyWords/blob/master/content/2018/vi/vi_50k.txt","https://tatoeba.org/en/downloads","https://github.com/anti-ltd/clink-language-packs"],
+    "nextWordModel":true,"neural":false,"inputMethod":"Vietnamese Telex",
+    "note":"Community Vietnamese pack. Telex is represented as generated CIME data; no Lua runtime hook is used."
+  }],
+  "imes":[]
+}
