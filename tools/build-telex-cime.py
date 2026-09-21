@@ -165,10 +165,18 @@ def telex_aliases(word):
     return list(dict.fromkeys(readings))
 
 def add(rows,reading,candidate):
-    if not reading or not candidate or reading==candidate: return
+    if not reading or not candidate: return
     rows.setdefault(reading,[])
     if candidate not in rows[reading]: rows[reading].append(candidate)
     rows[reading]=rows[reading][:16]
+
+def add_literal(rows,reading):
+    """Add an explicit identity escape entry for static CIME."""
+    if not reading: return
+    rows.setdefault(reading,[])
+    if reading not in rows[reading]: rows[reading].append(reading)
+    rows[reading]=rows[reading][:16]
+
 
 rows={}
 for raw in source.read_text(encoding="utf-8").splitlines():
@@ -184,7 +192,7 @@ for raw in source.read_text(encoding="utf-8").splitlines():
 # aa/ee/oo/dd remain their normal Vietnamese transformations.
 for vowel,typed,special in (("a","aa","â"),("e","ee","ê"),("o","oo","ô")):
     for n in range(3,33):
-        add(rows,vowel*n,vowel*n)
+        add_literal(rows,vowel*n)
 # Repeating w after a transformed vowel means "keep the second w literally":
 # uww -> ưw, oww -> ơw, aww -> ăw.
 for base,special in (("u","ư"),("o","ơ"),("a","ă")):
@@ -195,7 +203,7 @@ for base,special in (("u","ư"),("o","ơ"),("a","ă")):
 # not part of a known Vietnamese reading.
 for key in "sfrxjz":
     for n in range(2,17):
-        add(rows,key*n,key*n)
+        add_literal(rows,key*n)
 
 dest=pathlib.Path("Lexicons")/f"{code}.cime"
 dest.parent.mkdir(exist_ok=True)
