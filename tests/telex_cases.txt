@@ -42,3 +42,41 @@ Vieejt + z -> Viet
 # English-ish edge cases: a final tone key must not be stripped when
 # there is no vowel in the word.
 rhythm -> rhythm
+
+
+# Tone placement regression cases
+# These specifically guard against the old "last vowel" bug:
+# ao/au/ai/ay -> first vowel, oa/oe/uy -> second vowel,
+# and common three-vowel nuclei -> middle vowel (uyê -> ê).
+aos -> áo
+aof -> ào
+aor -> ảo
+aox -> ão
+aoj -> ạo
+aus -> áu
+aús -> áu
+ais -> ái
+ays -> áy
+oas -> oás
+oes -> oés
+uys -> uýs
+oais -> oái
+oays -> oấy
+uois -> uốis
+ieus -> iếus
+yeus -> yếus
+uyes -> uyês
+uays -> uấys
+uois -> uốis
+uoir -> uổir
+uoix -> uỗix
+uoii -> uôi
+# Real-word-shaped examples
+hoas -> hoás
+hoais -> hoáis
+khoes -> khoés
+thuyis -> thuý
+quas -> quás
+gias -> giá
+gius -> giú
+gieu s -> giêu s
