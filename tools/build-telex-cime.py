@@ -24,6 +24,7 @@ def telex_char(ch):
     tone=next((TONE[m] for m in ("\u0301","\u0300","\u0309","\u0303","\u0323") if m in marks),None)
     return shape,tone
 def telex_syllable(text):
+    """Telex order with the tone key immediately after the vowel nucleus."""
     parts=[]; tone=None
     for ch in text:
         shape,ch_tone=telex_char(ch)
@@ -31,39 +32,33 @@ def telex_syllable(text):
         parts.append((shape,base in "aeiouy"))
         if ch_tone: tone=ch_tone
     if not tone: return "".join(shape for shape,_ in parts)
-    last_vowel=-1
-    for i,(_,is_vowel) in enumerate(parts):
-        if is_vowel: last_vowel=i
-    if last_vowel < 0: return "".join(shape for shape,_ in parts)+tone
+    last_vowel=max((i for i,(_,v) in enumerate(parts) if v),default=-1)
+    if last_vowel<0: return "".join(shape for shape,_ in parts)+tone
     return "".join(shape for shape,_ in parts[:last_vowel+1])+tone+"".join(shape for shape,_ in parts[last_vowel+1:])
+def telex_syllable_end(text):
+    parts=[]; tone=None
+    for ch in text:
+        shape,ch_tone=telex_char(ch)
+        parts.append(shape)
+        if ch_tone: tone=ch_tone
+    return "".join(parts)+(tone or "")
 
-def telex_word(word):
-    """Canonical Telex stream: tone key after the syllable."""
+def _map_word(word, syllable_fn):
     out=[]; buf=[]
     for ch in unicodedata.normalize("NFC",word):
         if ch.isalpha(): buf.append(ch)
         else:
-            if buf: out.append(telex_syllable("".join(buf))); buf=[]
+            if buf: out.append(syllable_fn("".join(buf))); buf=[]
             out.append(ch)
-    if buf: out.append(telex_syllable("".join(buf)))
+    if buf: out.append(syllable_fn("".join(buf)))
     return "".join(out)
+def telex_word(word):
+    """Canonical Telex stream: tone key after the syllable."""
+    return _map_word(word,telex_syllable_end)
 def telex_aliases(word):
-    """Return common equivalent Telex orders used by the tested rules."""
     canonical=telex_word(word)
-    aliases=[canonical]
-    chars=list(unicodedata.normalize("NFC",word))
-    tone=None; last_vowel=-1
-    for i,ch in enumerate(chars):
-        d=unicodedata.normalize("NFD",ch); marks=set(d[1:]); base=d[0].lower()
-        if base in "aeiouy": last_vowel=i
-        for mark,key in TONE.items():
-            if mark in marks: tone=key
-    if tone and last_vowel>=0:
-        prefix=telex_word("".join(chars[:last_vowel+1]))
-        suffix=telex_word("".join(chars[last_vowel+1:]))
-        alt=prefix+tone+suffix
-        if alt not in aliases: aliases.append(alt)
-    return aliases
+    alternate=_map_word(word,telex_syllable)
+    return [canonical] if alternate==canonical else [canonical,alternate]
 
 rows={}
 for raw in source.read_text(encoding="utf-8").splitlines():
