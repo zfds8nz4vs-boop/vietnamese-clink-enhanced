@@ -1,118 +1,74 @@
-name: Release Vietnamese Clink pack
-
+name: Build and publish Vietnamese Clink pack
 on:
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag
         required: true
-        default: vvi-official-3-1
+        default: vvi-official-4-1
       prerelease:
-        description: Mark as prerelease
+        description: Mark release as prerelease
         required: true
         type: boolean
         default: false
   push:
+    branches: [main]
     paths:
-      - "tools/**"
+      - "Lexicons/**"
       - "source/**"
-      - "Lexicons/vi.emoji.json"
-      - "lua/vietnamese-telex.lua"
+      - "tools/**"
+      - "catalog/**"
       - "README.md"
       - "NOTICE.md"
       - "LICENSE.md"
+      - "RELEASE-NOTES.md"
       - ".github/workflows/release-vietnamese.yml"
-
 permissions:
   contents: write
-
+concurrency:
+  group: vietnamese-clink-release
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
-      TAG: ${{ github.event.inputs.tag || 'vvi-official-3-1' }}
-      PRERELEASE: ${{ github.event.inputs.prerelease || 'false' }}
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install inputs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Fetch licensed Vietnamese sources
         run: |
           python3 tools/fetch-vietnamese-sources.py
-          python3 - <<'PY'
-          import bz2, pathlib
-          src = pathlib.Path("source/vie_sentences.tsv.bz2")
-          out = pathlib.Path("source/vie_sentences.tsv")
-          with bz2.open(src, "rb") as f:
-              out.write_bytes(f.read())
-          PY
-
-      - name: Build and validate pack
+          python3 -c "import bz2,pathlib; p=pathlib.Path('source/vie_sentences.tsv.bz2'); pathlib.Path('source/vie_sentences.tsv').write_bytes(bz2.open(p,'rb').read())"
+      - name: Build dictionary, next-word model and Telex CIME
         run: |
+          set -euo pipefail
           python3 tools/build-pack.py vi source/vi_50k.txt
           python3 tools/build-next-word.py vi source/vi_50k.txt source/vie_sentences.tsv
+          python3 tools/build-telex-cime.py vi source/vi_50k.txt
           python3 tools/validate-pack.py vi
-          python3 - <<'PY'
-          import json, pathlib, hashlib
-          files = [
-              pathlib.Path("Lexicons/vi.clex"),
-              pathlib.Path("Lexicons/vi.cngm"),
-              pathlib.Path("Lexicons/vi.emoji.json"),
-              pathlib.Path("lua/vietnamese-telex.lua"),
-          ]
-          manifest = {
-              "schema_version": 1,
-              "id": "vi--vi",
-              "language": "Vietnamese",
-              "locale": "vi-VN",
-              "input_method": "Telex",
-              "release": "${{ env.TAG }}",
-              "artifacts": [
-                  {"name": p.name, "sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "size": p.stat().st_size}
-                  for p in files
-              ]
-          }
-          pathlib.Path("manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-          PY
-
-      - name: Assemble release assets
-        run: |
-          mkdir -p release
-          cp Lexicons/vi.clex release/vi--vi.clex
-          cp Lexicons/vi.cngm release/vi--vi.cngm
-          cp Lexicons/vi.emoji.json release/vi--vi.emoji.json
-          cp lua/vietnamese-telex.lua release/vi--vietnamese-telex.lua
-          cp manifest.json README.md NOTICE.md LICENSE.md release/
-          cat > release/RELEASE-NOTES.md <<'EOF'
-          # Vietnamese Clink pack
-
-          Vietnamese Telex language/input pack for Clink.
-
-          Included:
-          - `vi--vi.clex`: Vietnamese vocabulary dictionary.
-          - `vi--vi.cngm`: Vietnamese next-word model.
-          - `vi--vi.emoji.json`: Vietnamese emoji aliases.
-          - `vi--vietnamese-telex.lua`: Clink-side Telex input adapter.
-          - `manifest.json`: release manifest with SHA-256 checksums.
-          - `NOTICE.md` and `LICENSE.md`: provenance and licensing.
-
-          The Lua input adapter is the actual Telex input layer. The CLEX/CNGM
-          files provide dictionary and next-word data and do not contain the
-          UniKey input engine.
-
-          This is an initial Vietnamese pack release. The CNGM builder is
-          project-local and its byte-level compatibility with every upstream
-          Clink language-pack consumer has not been independently verified.
-          EOF
-
-      - name: Publish GitHub release
+          python3 tools/validate-catalog.py
+          python3 -m unittest discover -s tools -p 'test_*.py' -v
+      - name: Build release manifest
         env:
-          GH_TOKEN: ${{ github.token }}
+          VERSION: \${{ github.event.inputs.tag || format('vvi-official-{0}-{1}', github.run_number, github.run_attempt) }}
         run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; refusing to overwrite it."
-            exit 1
-          fi
-          gh release create "$TAG" --title "Clink Vietnamese · Telex · $TAG" --target "$GITHUB_SHA" --notes-file release/RELEASE-NOTES.md \
-            release/manifest.json release/vi--vi.clex release/vi--vi.cngm \
-            release/vi--vi.emoji.json release/vi--vietnamese-telex.lua \
-            release/README.md release/NOTICE.md release/LICENSE.md
+          set -euo pipefail
+          python3 tools/build-release-manifest.py "$VERSION" "$GITHUB_REPOSITORY" out
+          cp README.md NOTICE.md LICENSE.md RELEASE-NOTES.md out/
+      - name: Publish immutable draft
+        env:
+          GH_TOKEN: \${{ github.token }}
+          VERSION: \${{ github.event.inputs.tag || format('vvi-official-{0}-{1}', github.run_number, github.run_attempt) }}
+          PRERELEASE: \${{ github.event.inputs.prerelease || 'false' }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then echo "Release already exists"; exit 1; fi
+          args=(gh release create "$VERSION" --target "$GITHUB_SHA" --draft --title "Clink Vietnamese · Telex · $VERSION" --notes-file RELEASE-NOTES.md)
+          if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); fi
+          "\${args[@]}"
+          gh release upload "$VERSION" out/assets/* out/manifest.json README.md NOTICE.md LICENSE.md RELEASE-NOTES.md
+          gh release edit "$VERSION" --draft=false
