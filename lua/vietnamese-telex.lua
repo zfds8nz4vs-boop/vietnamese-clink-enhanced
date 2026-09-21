@@ -174,6 +174,8 @@ local installed=false
 -- This lets Backspace undo a Telex keystroke instead of deleting the rendered
 -- Vietnamese character as a whole (e.g. "aa" -> "â", then Backspace -> "a").
 local composition = nil
+local backspace_binding = nil
+local backspace_del_binding = nil
 
 local function is_letter_key(c)
     return c:match("^[A-Za-z]$") ~= nil
@@ -286,7 +288,7 @@ end
 local function handle_backspace(rl_buffer)
     sync_composition(rl_buffer)
     if not composition then
-        local old=old_bindings.__backspace
+        local old=backspace_binding
         if old then rl.invokecommand(old) end
         return
     end
@@ -366,14 +368,13 @@ local function install()
 
     -- Backspace is commonly reported as either Ctrl-H or DEL depending on
     -- the console/input path.  Bind both forms to the same semantic handler.
-    old_bindings.__backspace=rl.getbinding([["\C-H"]])
+    backspace_binding=rl.getbinding([["\C-H"]])
     local backspace_name="vi_telex_backspace"
     _G[backspace_name]=make_backspace_handler()
     rl.setbinding([["\C-H"]],"luafunc:"..backspace_name)
 
-    local old_del=rl.getbinding([["\C-?"]])
-    if old_del then
-        old_bindings.__backspace=old_del
+    backspace_del_binding=rl.getbinding([["\C-?"]])
+    if backspace_del_binding then
         rl.setbinding([["\C-?"]],"luafunc:"..backspace_name)
     end
 
