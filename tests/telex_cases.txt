@@ -151,3 +151,14 @@ luwix -> lưỡi
 muois -> muối
 muois -> muối
 muois -> muối
+
+
+# Repeated-key / keyboard auto-repeat behavior.
+# Ordinary Telex remains:
+aa -> â
+aaa -> âa
+aaaa -> ââ
+# Very rapid repetition of the same key (as from holding a key) is detected
+# after the third event and converted to literal ASCII instead of continuing
+# to compose â/ă/etc.
+# Example manual test: hold "a" -> aaaa... (timing-dependent, not a file-run test).
