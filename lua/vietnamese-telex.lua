@@ -136,7 +136,8 @@ local function normalize_raw(word)
 end
 
 local lower_vowel = {
-    A="a", Ă="ă", Â="â", E="e", Ê="ê", I="i", O="o", Ô="ô", Ơ="ơ", U="u", Ư="ư", Y="y",
+    ["A"]="a", ["Ă"]="ă", ["Â"]="â", ["E"]="e", ["Ê"]="ê", ["I"]="i",
+    ["O"]="o", ["Ô"]="ô", ["Ơ"]="ơ", ["U"]="u", ["Ư"]="ư", ["Y"]="y",
 }
 
 local function vowel_lower(c)
