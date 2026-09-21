@@ -9,7 +9,7 @@ class TelexRulesTest(unittest.TestCase):
             ns=runpy.run_path(str(Path(__file__).with_name("build-telex-cime.py")),run_name="__test__")
         finally:
             sys.argv=old
-        cls.telex=ns["telex_word"]
+        cls.telex=staticmethod(ns["telex_word"])
     def test_rules(self):
         self.assertEqual(self.telex("tiếng"),"tieengs")
         self.assertEqual(self.telex("Việt"),"Vieejt")
