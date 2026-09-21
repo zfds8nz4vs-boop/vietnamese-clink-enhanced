@@ -1,0 +1,16 @@
+{
+  "language":"vi",
+  "method":"Telex",
+  "cases":[
+    {"input":"aa","expected":"â"},
+    {"input":"aw","expected":"ă"},
+    {"input":"ee","expected":"ê"},
+    {"input":"oo","expected":"ô"},
+    {"input":"ow","expected":"ơ"},
+    {"input":"uw","expected":"ư"},
+    {"input":"dd","expected":"đ"},
+    {"input":"tieengs","expected":"tiếng"},
+    {"input":"Vieejt","expected":"Việt"},
+    {"input":"dduowngf","expected":"đường"}
+  ]
+}
