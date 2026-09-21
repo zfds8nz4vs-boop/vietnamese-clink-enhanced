@@ -1,0 +1,22 @@
+# Vietnamese Telex regression cases
+# input -> expected
+aa -> â
+aaf -> ầ
+aas -> ấ
+aw -> ă
+aws -> ắ
+ee -> ê
+ees -> ế
+oo -> ô
+oos -> ố
+ow -> ơ
+ows -> ớ
+uw -> ư
+uws -> ứ
+dd -> đ
+tieengs -> tiếng
+Vieejt -> Việt
+Nguyeexn -> Nguyễn
+thuwowngf -> thương
+ddoofng -> đồng
+muas -> múa
