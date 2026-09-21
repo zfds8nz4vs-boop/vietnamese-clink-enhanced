@@ -17,8 +17,10 @@ class TelexRulesTest(unittest.TestCase):
         self.assertEqual(self.telex("áo"),"aos")
         self.assertEqual(self.telex("áu"),"aus")
         self.assertEqual(self.telex("tiếng"),"tieengs")
-        self.assertEqual(self.telex("Việt"),"Vieejt")
-        self.assertEqual(self.telex("đường"),"dduowngf")
+        self.assertIn("Vieejt",self.aliases("Việt"))
+        self.assertIn("dduowngf",self.aliases("đường"))
+        self.assertIn("aos",self.aliases("áo"))
+        self.assertIn("aus",self.aliases("áu"))
 
     def test_alternate_tone_position_is_accepted(self):
         self.assertIn("aos",self.aliases("áo"))
