@@ -22,7 +22,7 @@ class TelexRulesTest(unittest.TestCase):
             "áo":"aos",
             "áu":"aus",
             "tiếng":"tieengs",
-            "Việt":"Vieejt",
+            "Việt":"Vieetj",
             "đường":"dduowngf",
             "người":"nguwowif",
         }
@@ -34,12 +34,12 @@ class TelexRulesTest(unittest.TestCase):
             "hòa":"hoaf",
             "hoà":"hoaf",
             "khỏe":"khoer",
-            "huỷ":"huys",
+            "huỷ":"huyr",
             "quý":"quys",
             "của":"cuar",
             "mía":"misa",
             "ngoáy":"ngoasy",
-            "thoải":"thoais",
+            "thoải":"thoair",
             "quyết":"quyeets",
         }
         for word,reading in modern.items():
@@ -48,7 +48,7 @@ class TelexRulesTest(unittest.TestCase):
 
         traditional={
             "hóa":"hosa",
-            "hủy":"husy",
+            "hủy":"hury",
             "quả":"quar",
             "mía":"misa",
         }
@@ -57,14 +57,14 @@ class TelexRulesTest(unittest.TestCase):
                 self.assertIn(reading,self.aliases(word))
 
         positional={
-            "bài":"basi",
-            "bảy":"bays",
+            "bài":"bafi",
+            "bảy":"bayr",
             "của":"cuar",
             "chiều":"chieefu",
             "chuối":"chuoosi",
-            "mười":"muowfi",
-            "nước":"nuowsc",
-            "biển":"bieens",
+            "mười":"muwowfi",
+            "nước":"nuwowsc",
+            "biển":"bieern",
             "quyền":"quyeefn",
         }
         for word,reading in positional.items():
@@ -74,8 +74,8 @@ class TelexRulesTest(unittest.TestCase):
     def test_aliases_include_both_tone_styles(self):
         self.assertIn("hoaf",self.aliases("hòa"))
         self.assertIn("hofa",self.aliases("hòa"))
-        self.assertIn("huys",self.aliases("hủy"))
-        self.assertIn("husy",self.aliases("hủy"))
+        self.assertIn("huyr",self.aliases("hủy"))
+        self.assertIn("hury",self.aliases("hủy"))
 
     def test_literal_repeated_letters(self):
         for reading in ("aaa","aaaa","aaaaaaaa","eeee","oooooooo"):
