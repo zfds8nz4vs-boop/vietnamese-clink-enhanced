@@ -104,7 +104,7 @@ taos -> táo
 taus -> táu
 tays -> táy
 teos -> téo
-teeus -> téêu
+teus -> téu
 tias -> tía
 tiees -> tiế
 tius -> tíu
@@ -112,48 +112,42 @@ toas -> toá
 toes -> toé
 tois -> tói
 toois -> tôi
-toirs -> tởi
+toir -> tỏi
 tuas -> túa
 tuis -> túi
 tuees -> tuế
 tuois -> tuối
-tuois -> tuối
-tuas -> túa
-tuas -> túa
-tuois -> tuối
-tuois -> tuối
 tuys -> tuý
 tuyes -> tuyế
-tuyenf -> tuyề
-tuyenr -> tuyể
-tuyenx -> tuyễ
-tuyenj -> tuyệ
 
-# Real-world difficult structures.
+# Difficult real-word structures.
 nguyeens -> nguyến
-nguyeenf -> nguyề n
+nguyeenf -> nguyề
 nguyenr -> nguyển
-nguyenx -> nguyễ n
+nguyenx -> nguyễ
 nguyenj -> nguyện
 thuyeens -> thuyến
 quyeets -> quyết
 quyeef -> quyề
+quyeer -> quyể
+quyeex -> quyễ
+quyeej -> quyệ
 khuyees -> khuyế
-khuyrs -> khuý
-khuyrs -> khuý
+khuyeef -> khuyề
+khuyeer -> khuyể
+khuyeex -> khuyễ
+khuyeej -> khuyệ
+khuys -> khúy
+khuỷu -> khuỷu
+
+# Iê/uô/ươ families with codas.
 chuoois -> chuối
-muooi s -> muối
 muois -> muối
-muois -> muối
-luooi -> luôi
 muoif -> muồi
+muoir -> muổi
 muoix -> muỗi
 muoij -> muội
-muoos -> muố
-muoors -> muổ
-muoox -> muỗ
-muooj -> muộ
-murois -> mười
 luoix -> lưỡi
-uoir -> uổi
-uois -> uối
+muois -> muối
+muois -> muối
+muois -> muối
