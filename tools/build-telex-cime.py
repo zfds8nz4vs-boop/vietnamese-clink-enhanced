@@ -38,6 +38,7 @@ def telex_syllable(text):
     return "".join(shape for shape,_ in parts[:last_vowel+1])+tone+"".join(shape for shape,_ in parts[last_vowel+1:])
 
 def telex_word(word):
+    """Canonical Telex stream: tone key after the syllable."""
     out=[]; buf=[]
     for ch in unicodedata.normalize("NFC",word):
         if ch.isalpha(): buf.append(ch)
@@ -46,6 +47,24 @@ def telex_word(word):
             out.append(ch)
     if buf: out.append(telex_syllable("".join(buf)))
     return "".join(out)
+def telex_aliases(word):
+    """Return common equivalent Telex orders used by the tested rules."""
+    canonical=telex_word(word)
+    aliases=[canonical]
+    chars=list(unicodedata.normalize("NFC",word))
+    tone=None; last_vowel=-1
+    for i,ch in enumerate(chars):
+        d=unicodedata.normalize("NFD",ch); marks=set(d[1:]); base=d[0].lower()
+        if base in "aeiouy": last_vowel=i
+        for mark,key in TONE.items():
+            if mark in marks: tone=key
+    if tone and last_vowel>=0:
+        prefix=telex_word("".join(chars[:last_vowel+1]))
+        suffix=telex_word("".join(chars[last_vowel+1:]))
+        alt=prefix+tone+suffix
+        if alt not in aliases: aliases.append(alt)
+    return aliases
+
 rows={}
 for raw in source.read_text(encoding="utf-8").splitlines():
     raw=raw.strip()
@@ -53,11 +72,11 @@ for raw in source.read_text(encoding="utf-8").splitlines():
     fields=raw.rsplit(maxsplit=1); word=fields[0] if len(fields)==2 else raw
     word=unicodedata.normalize("NFC",word.strip())
     if not word or any(ch.isspace() for ch in word) or not any(ch.isalpha() for ch in word): continue
-    reading=telex_word(word)
-    if reading==word: continue
-    rows.setdefault(reading,[])
-    if word.lower() not in [x.lower() for x in rows[reading]]: rows[reading].append(word)
-    rows[reading]=rows[reading][:16]
+    for reading in telex_aliases(word):
+        if reading==word: continue
+        rows.setdefault(reading,[])
+        if word.lower() not in [x.lower() for x in rows[reading]]: rows[reading].append(word)
+        rows[reading]=rows[reading][:16]
 if not rows: raise SystemExit("No Telex rows generated.")
 dest=pathlib.Path("Lexicons")/f"{code}.cime"; dest.parent.mkdir(exist_ok=True)
 with dest.open("w",encoding="utf-8",newline="\n") as f:
