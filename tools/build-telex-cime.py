@@ -6,18 +6,26 @@ code,source=sys.argv[1],pathlib.Path(sys.argv[2])
 if code!="vi": raise SystemExit("This builder targets Vietnamese.")
 SHAPE={"a":"aa","A":"AA","e":"ee","E":"EE","o":"oo","O":"OO","ă":"aw","Ă":"AW","ơ":"ow","Ơ":"OW","u":"uw","U":"UW"}
 TONE={"\u0301":"s","\u0300":"f","\u0309":"r","\u0303":"x","\u0323":"j"}
-def telex_char(ch):
-    if ch in ("đ","Đ"): return "dd" if ch=="đ" else "DD"
-    decomp=unicodedata.normalize("NFD",ch)
-    if len(decomp)==1: return ch
-    base=decomp[0]; marks=decomp[1:]
-    out=SHAPE.get(base,base)
-    tone=""
-    for mark in marks:
-        if mark in TONE: tone=TONE[mark].upper() if base.isupper() else TONE[mark]
-    return out+tone
+def telex_syllable(text):
+    out=[]; tone=None
+    for ch in unicodedata.normalize("NFD",text):
+        if ch in TONE:
+            tone=TONE[ch]; continue
+        if ch in ("đ","Đ"):
+            out.append("dd" if ch=="đ" else "DD")
+        else:
+            out.append(SHAPE.get(ch,ch))
+    return "".join(out)+(tone or "")
 def telex_word(word):
-    return "".join(telex_char(ch) for ch in unicodedata.normalize("NFC",word))
+    out=[]; buf=[]
+    for ch in unicodedata.normalize("NFC",word):
+        if ch.isalpha():
+            buf.append(ch)
+        else:
+            if buf: out.append(telex_syllable("".join(buf))); buf=[]
+            out.append(ch)
+    if buf: out.append(telex_syllable("".join(buf)))
+    return "".join(out)
 rows={}
 for raw in source.read_text(encoding="utf-8").splitlines():
     raw=raw.strip()
