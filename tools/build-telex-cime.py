@@ -56,6 +56,17 @@ def _map_word(word, syllable_fn):
     if buf: out.append(syllable_fn("".join(buf)))
     return "".join(out)
 
+def telex_syllable_end(text):
+    parts=[]; tone=None
+    for ch in text:
+        shape,ch_tone=telex_char(ch)
+        parts.append(shape)
+        if ch_tone: tone=ch_tone
+    raw="".join(parts)
+    if raw=="uwow": raw="uow"
+    elif raw=="UWOW": raw="UOW"
+    return raw+(tone or "")
+
 def telex_plain_syllable(text):
     return _map_syllable(text)
 
