@@ -108,7 +108,7 @@ def choose_tone_index(chars):
     # bài, mía, của, ngoáy, ngoáo, ...
     return vowels[-2]
 
-def tone_reading(word):
+def tone_reading(word, chooser=choose_tone_index):
     chars=list(unicodedata.normalize("NFC",word))
     out=[]; buf=[]
     for ch in chars:
@@ -126,7 +126,7 @@ def _tone_syllable_reading(syllable):
         _,ch_tone=telex_char(ch)
         if ch_tone: tone=ch_tone
     if not tone: return _map_syllable(syllable)
-    pos=choose_tone_index(chars)
+    pos=chooser(chars)
     pieces=[]
     for i,ch in enumerate(chars):
         shape,_=telex_char(ch)
@@ -137,11 +137,31 @@ def _tone_syllable_reading(syllable):
 def _shape_plain_char(ch):
     return telex_char(ch)
 
+def choose_tone_index_old(chars):
+    """Traditional/old-style tone position, retained as a Telex input alias."""
+    vowels=[i for i,c in enumerate(chars) if vowel_label(c) in VOWELS]
+    if not vowels:
+        return None
+
+    if "".join(chars[:2]).lower() in ("gi","qu") and len(vowels) > 1:
+        vowels=vowels[1:]
+
+    # A quality-marked vowel always carries the tone in Vietnamese spelling.
+    marked=[i for i in vowels if vowel_label(chars[i]) in "ăâêôơư"]
+    if marked:
+        return marked[-1] if len(marked) > 1 else marked[0]
+
+    # Old style: last vowel when there is a final consonant, otherwise
+    # penultimate vowel (the tone is kept visually near the center).
+    if vowels[-1] < len(chars)-1:
+        return vowels[-1]
+    return vowels[-2] if len(vowels) >= 2 else vowels[0]
+
 def telex_word(word):
     return _map_word(word,telex_syllable_end)
 
 def telex_aliases(word):
-    readings=[telex_word(word),tone_reading(word)]
+    readings=[telex_word(word),tone_reading(word),tone_reading(word, choose_tone_index_old)]
     return list(dict.fromkeys(readings))
 
 def add(rows,reading,candidate):
