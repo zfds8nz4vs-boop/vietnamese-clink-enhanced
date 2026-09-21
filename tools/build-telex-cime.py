@@ -46,29 +46,63 @@ def _map_syllable(text, tone_before_coda=False):
     if last<0: return raw+tone
     return "".join(shape for shape,_ in parts[:last+1])+tone+"".join(shape for shape,_ in parts[last+1:])
 
-def telex_word(word):
-    out=[];buf=[]
-    for ch in unicodedata.normalize("NFC",word):
+def telex_plain_syllable(text):
+    return _map_syllable(text)
+
+def choose_tone_index(chars):
+    vowels=[i for i,c in enumerate(chars) if unicodedata.normalize("NFD",c)[0].lower() in VOWELS]
+    if not vowels: return None
+    if len(vowels)==1: return vowels[0]
+    vals=[unicodedata.normalize("NFD",chars[i])[0].lower() for i in vowels]
+    if chars[:2] and "".join(chars[:2]).lower() in ("gi","qu"):
+        vals=vals[1:]; vowels=vowels[1:]
+    seq="".join(vals)
+    if len(vals)==3:
+        if seq=="uyê": return vowels[2]
+        return vowels[1]
+    second={"oa","oe","uê","uâ","uy","iê","yê","uô","ươ"}
+    first={"ai","ao","au","ay","âu","ây","eo","êu","ia","iu","oi","ôi","ơi","ua","ui","ưa","ưi","ưu"}
+    if len(vals)==2:
+        return vowels[1] if seq in second else vowels[0]
+    return vowels[(len(vowels)-1)//2]
+
+def tone_reading(word):
+    chars=list(unicodedata.normalize("NFC",word))
+    out=[]; buf=[]
+    for ch in chars:
         if ch.isalpha(): buf.append(ch)
         else:
-            if buf: out.append(_map_syllable("".join(buf)));buf=[]
+            if buf: out.append(_map_syllable("".join(buf))); buf=[]
             out.append(ch)
-    if buf: out.append(_map_syllable("".join(buf)))
+    if buf:
+        syll="".join(buf)
+        tone=None
+        plain=[]
+        for ch in syll:
+            d=unicodedata.normalize("NFD",ch)
+            tone=next((TONE[m] for m in ("\u0301","\u0300","\u0309","\u0303","\u0323") if m in d[1:]),tone)
+            plain.append(d[0])
+        if tone:
+            pos=choose_tone_index(plain)
+            pieces=[]
+            for i,ch in enumerate(plain):
+                shape,_=_shape_plain_char(ch)
+                pieces.append(shape)
+                if i==pos: pieces.append(tone)
+            out.append("".join(pieces))
+        else:
+            out.append(_map_syllable(syll))
     return "".join(out)
 
+def _shape_plain_char(ch):
+    return telex_char(ch)
+
+def telex_word(word):
+    return _map_word(word,telex_syllable_end)
+
 def telex_aliases(word):
-    canonical=telex_word(word)
-    alternate=[]
-    out=[];buf=[]
-    for ch in unicodedata.normalize("NFC",word):
-        if ch.isalpha(): buf.append(ch)
-        else:
-            if buf: out.append(_map_syllable("".join(buf),True));buf=[]
-            out.append(ch)
-    if buf: out.append(_map_syllable("".join(buf),True))
-    alt="".join(out)
-    if alt!=canonical: alternate.append(alt)
-    return [canonical,*alternate]
+    readings=[telex_word(word),tone_reading(word)]
+    return list(dict.fromkeys(readings))
 
 def add(rows,reading,candidate):
     if not reading or not candidate or reading==candidate: return
