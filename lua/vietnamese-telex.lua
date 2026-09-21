@@ -73,15 +73,26 @@ local canonical_base = {
     ["Â"]="AA",["Ă"]="AW",["Ê"]="EE",["Ô"]="OO",["Ơ"]="OW",["Ư"]="UW",["Đ"]="DD",
 }
 
+local tone_for_char = {}
+for n,map in pairs(tone) do
+    for plain,accented in pairs(map) do tone_for_char[accented]={plain,n} end
+end
+for n,map in pairs(tone_upper) do
+    for plain,accented in pairs(map) do tone_for_char[accented]={plain,n} end
+end
+
 local function to_canonical_telex(word)
-    local chars=utf8_chars(word)
     local out={}
-    for _,c in ipairs(chars) do
-        local b=unaccent[c] or c
-        if canonical_base[b] then
-            out[#out+1]=canonical_base[b]
+    for _,c in ipairs(utf8_chars(word)) do
+        local t=tone_for_char[c]
+        if t then
+            local plain=t[1]
+            local base_key=canonical_base[plain]
+            out[#out+1]=base_key or plain
+            out[#out+1]=({"s","f","r","x","j"})[t[2]]
         else
-            out[#out+1]=b
+            local b=unaccent[c] or c
+            out[#out+1]=canonical_base[b] or b
         end
     end
     return table.concat(out)
@@ -91,10 +102,11 @@ local function normalize_raw(word)
     local chars=utf8_chars(word)
     local out={}
     local tone_id
-    for _,c in ipairs(chars) do
-        if tone_marks[c] then
+    local last=1
+    for i,c in ipairs(chars) do
+        if i==#chars and tone_marks[c] then
             tone_id=tone_marks[c]
-        elseif c=="z" then
+        elseif i==#chars and c=="z" then
             tone_id=nil
         else
             out[#out+1]=unaccent[c] or c
@@ -112,6 +124,13 @@ local function normalize_raw(word)
             mod[#mod+1]=out[i]
             i=i+1
         end
+    end
+
+    -- A tone key only acts when the syllable has at least one vowel.
+    if tone_id then
+        local has_vowel=false
+        for _,c in ipairs(mod) do if vowels[c] then has_vowel=true break end end
+        if not has_vowel then tone_id=nil end
     end
     return mod,tone_id
 end
@@ -169,8 +188,11 @@ local function transform_current_word(rl_buffer)
     local raw_word=prefix:sub(word_start)
     if raw_word=="" then return end
 
-    -- Reconstruct the canonical Telex spelling from the displayed word so
-    -- sequences such as aa -> â can continue with a tone key: â + s -> ấ.
+    -- Only compose while the cursor is at the end of the current word.
+    -- This prevents ordinary cursor editing from unexpectedly rewriting text.
+    if cursor ~= #prefix + 1 then return end
+
+    -- Reconstruct canonical Telex spelling while preserving an existing tone.
     raw_word=to_canonical_telex(raw_word)
     local composed=M.compose(raw_word)
     if composed==raw_word then return end
