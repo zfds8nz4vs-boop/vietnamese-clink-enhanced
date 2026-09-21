@@ -1,0 +1,1 @@
+Python tooling in this repository uses only the Python standard library for the pack build. Neural training is intentionally not part of the Vietnamese release.
