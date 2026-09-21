@@ -93,27 +93,25 @@ def tone_reading(word):
     for ch in chars:
         if ch.isalpha(): buf.append(ch)
         else:
-            if buf: out.append(_map_syllable("".join(buf))); buf=[]
+            if buf: out.append(_tone_syllable_reading("".join(buf))); buf=[]
             out.append(ch)
-    if buf:
-        syll="".join(buf)
-        tone=None
-        plain=[]
-        for ch in syll:
-            d=unicodedata.normalize("NFD",ch)
-            tone=next((TONE[m] for m in ("\u0301","\u0300","\u0309","\u0303","\u0323") if m in d[1:]),tone)
-            plain.append(d[0])
-        if tone:
-            pos=choose_tone_index(plain)
-            pieces=[]
-            for i,ch in enumerate(plain):
-                shape,_=_shape_plain_char(ch)
-                pieces.append(shape)
-                if i==pos: pieces.append(tone)
-            out.append("".join(pieces))
-        else:
-            out.append(_map_syllable(syll))
+    if buf: out.append(_tone_syllable_reading("".join(buf)))
     return "".join(out)
+
+def _tone_syllable_reading(syllable):
+    chars=list(unicodedata.normalize("NFC",syllable))
+    tone=None
+    for ch in chars:
+        _,ch_tone=telex_char(ch)
+        if ch_tone: tone=ch_tone
+    if not tone: return _map_syllable(syllable)
+    pos=choose_tone_index(chars)
+    pieces=[]
+    for i,ch in enumerate(chars):
+        shape,_=telex_char(ch)
+        pieces.append(shape)
+        if i==pos: pieces.append(tone)
+    return "".join(pieces)
 
 def _shape_plain_char(ch):
     return telex_char(ch)
