@@ -138,7 +138,7 @@ khuyeer -> khuyể
 khuyeex -> khuyễ
 khuyeej -> khuyệ
 khuys -> khúy
-khuỷu -> khuỷu
+khuyur -> khuỷu
 
 # Iê/uô/ươ families with codas.
 chuoois -> chuối
@@ -147,7 +147,7 @@ muoif -> muồi
 muoir -> muổi
 muoix -> muỗi
 muoij -> muội
-luoix -> lưỡi
+luwix -> lưỡi
 muois -> muối
 muois -> muối
 muois -> muối
