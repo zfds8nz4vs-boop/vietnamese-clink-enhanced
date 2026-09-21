@@ -1,0 +1,47 @@
+name: Build Vietnamese Clink pack
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/**"
+      - "source/**"
+      - "Lexicons/vi.emoji.json"
+      - ".github/workflows/build-vietnamese.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install inputs
+        run: |
+          python3 tools/fetch-vietnamese-sources.py
+          python3 - <<'PY'
+          import bz2, pathlib
+          src = pathlib.Path("source/vie_sentences.tsv.bz2")
+          out = pathlib.Path("source/vie_sentences.tsv")
+          out.write_bytes(bz2.open(src, "rb").read())
+          PY
+
+      - name: Build CLEX
+        run: |
+          python3 tools/build-pack.py vi source/vi_50k.txt
+          python3 tools/validate-pack.py vi
+
+      - name: Build CNGM
+        run: |
+          python3 tools/build-next-word.py vi source/vi_50k.txt source/vie_sentences.tsv
+          python3 tools/validate-pack.py vi
+
+      - name: Upload pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: vietnamese-clink-pack
+          path: |
+            Lexicons/vi.clex
+            Lexicons/vi.cngm
+            Lexicons/vi.emoji.json
+            NOTICE.md
+            LICENSE.md
