@@ -1,22 +1,44 @@
 # Vietnamese Telex regression cases
 # input -> expected
+
+# Vowel/consonant modifiers
 aa -> â
-aaf -> ầ
-aas -> ấ
 aw -> ă
-aws -> ắ
 ee -> ê
-ees -> ế
 oo -> ô
-oos -> ố
 ow -> ơ
-ows -> ớ
 uw -> ư
-uws -> ứ
 dd -> đ
+
+# Tone keys
+aas -> ấ
+aaf -> ầ
+aar -> ẩ
+aax -> ẫ
+aaj -> ậ
+aws -> ắ
+ees -> ế
+oos -> ố
+ows -> ớ
+uws -> ứ
+
+# Words
 tieengs -> tiếng
 Vieejt -> Việt
 Nguyeexn -> Nguyễn
-thuwowngf -> thương
+thuwowngf -> thường
 ddoofng -> đồng
 muas -> múa
+
+# Incremental composition examples
+aa + s -> ấ
+ee + s -> ế
+ow + s -> ớ
+
+# Tone removal
+tieengs + z -> tieng
+Vieejt + z -> Viet
+
+# English-ish edge cases: a final tone key must not be stripped when
+# there is no vowel in the word.
+rhythm -> rhythm
