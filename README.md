@@ -58,3 +58,29 @@ The repository now includes the same CLEX/CNGM build logic used by the upstream 
 The checked-in `Lexicons/vi.clex` remains the small bootstrap build from the initial source snapshot. The full 50k + sentence build is intentionally generated in CI rather than committing a large, automatically downloaded corpus to the repository.
 
 Tatoeba publishes sentence exports under CC BY 2.0 FR; FrequencyWords' generated unigram data is CC BY-SA 4.0. The build keeps those provenance boundaries explicit.
+
+## Telex input engine
+
+The repository now includes `lua/vietnamese-telex.lua`, a Clink-side Telex prototype. It uses Clink's Lua key-binding and `rl_buffer` APIs to transform printable letters while the command line is being edited. This is separate from `vi.clex`: the dictionary supports language data/completion, while the Lua layer performs Telex composition.
+
+Implemented in this first input-engine pass:
+
+- `s f r x j` tone keys;
+- `z` tone removal;
+- `aa aw ee oo ow uw dd` modifiers;
+- uppercase modifier support;
+- incremental composition (for example `aa` → `â`, then `s` → `ấ`);
+- common tone-placement heuristics;
+- undo grouping for each transformation;
+- a regression-case file at `tests/telex_cases.txt`.
+
+Clink exposes `rl.setbinding()`, `rl.getbinding()`, and the `rl_buffer` editing methods needed for this approach. The upstream Clink API documentation/source confirms that Lua key bindings can invoke functions and that `rl_buffer` can read, insert, remove, and reposition text.
+
+### Prototype limitations
+
+This is not yet a complete UniKey-equivalent IME. The next hardening pass should cover Backspace/Delete re-composition, cursor movement into the middle of a word, selections, all Vietnamese tone-placement rules, punctuation boundaries, Vi keymaps, and extensive regression testing against expected UniKey behavior.
+
+### Installing the prototype
+
+Copy `lua/vietnamese-telex.lua` into the Clink Lua scripts/profile directory and start a new Clink session. The script installs printable-letter bindings at the beginning of an edit session.
+
