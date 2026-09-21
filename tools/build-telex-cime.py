@@ -12,7 +12,7 @@ code,source=sys.argv[1],pathlib.Path(sys.argv[2])
 if code!="vi": raise SystemExit("This builder targets Vietnamese.")
 
 TONE={"\u0301":"s","\u0300":"f","\u0309":"r","\u0303":"x","\u0323":"j"}
-VOWELS=set("aeiouy")
+VOWELS=set("aăâeêioôơuưy")
 SHAPE={"a":"aa","e":"ee","o":"oo","ă":"aw","ơ":"ow","ư":"uw",
        "A":"AA","E":"EE","O":"OO","Ă":"AW","Ơ":"OW","Ư":"UW"}
 
