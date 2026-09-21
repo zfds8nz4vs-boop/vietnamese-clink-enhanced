@@ -11,7 +11,7 @@ def telex_char(ch):
     base=d[0]; marks=set(d[1:])
     upper=base.isupper(); b=base.lower()
     if "\u0302" in marks:
-        shape={"a":"aa","e":"ee","o":"oo"}[b]
+        shape={"a":"aa","e":"ee","o":"oo"}.get(b,base)
         if upper: shape=shape.upper()
     elif "\u0306" in marks:
         shape="aw" if b=="a" else "AW" if upper else "aw"
