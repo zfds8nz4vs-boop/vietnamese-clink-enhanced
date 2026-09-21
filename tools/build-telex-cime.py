@@ -70,12 +70,20 @@ def telex_syllable_end(text):
 def telex_plain_syllable(text):
     return _map_syllable(text)
 
+def vowel_label(ch):
+    d=unicodedata.normalize("NFD",ch)
+    base=d[0].lower(); marks=set(d[1:])
+    if "\u0302" in marks: return {"a":"â","e":"ê","o":"ô"}.get(base,base)
+    if "\u0306" in marks and base=="a": return "ă"
+    if "\u031b" in marks: return "ơ" if base=="o" else "ư"
+    return base
+
 def choose_tone_index(chars):
-    vowels=[i for i,c in enumerate(chars) if unicodedata.normalize("NFD",c)[0].lower() in VOWELS]
+    vowels=[i for i,c in enumerate(chars) if vowel_label(c) in VOWELS]
     if not vowels: return None
     if len(vowels)==1: return vowels[0]
-    vals=[unicodedata.normalize("NFD",chars[i])[0].lower() for i in vowels]
-    if chars[:2] and "".join(chars[:2]).lower() in ("gi","qu"):
+    vals=[vowel_label(chars[i]) for i in vowels]
+    if "".join(chars[:2]).lower() in ("gi","qu"):
         vals=vals[1:]; vowels=vowels[1:]
     seq="".join(vals)
     if len(vals)==3:
