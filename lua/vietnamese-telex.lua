@@ -468,24 +468,24 @@ local function install()
     end
 
     for _,keymap in ipairs(keymaps) do
-        local old=rl.getbinding([[ "\C-H" ]],keymap)
+        local old=rl.getbinding([["\C-H"]],keymap)
         if keymap=="emacs" then backspace_binding=old end
         old_bindings.__backspace=old_bindings.__backspace or old
         local name="vi_telex_backspace_"..keymap
         _G[name]=make_backspace_handler()
-        rl.setbinding([[ "\C-H" ]],"luafunc:"..name,keymap)
+        rl.setbinding([["\C-H"]],"luafunc:"..name,keymap)
 
-        local old_del=rl.getbinding([[ "\C-?" ]],keymap)
+        local old_del=rl.getbinding([["\C-?"]],keymap)
         if old_del then
             local del_name="vi_telex_backspace_del_"..keymap
             _G[del_name]=make_backspace_handler()
-            rl.setbinding([[ "\C-?" ]],"luafunc:"..del_name,keymap)
+            rl.setbinding([["\C-?"]],"luafunc:"..del_name,keymap)
         end
 
-        old_bindings.__delete=old_bindings.__delete or rl.getbinding([[ "\e[3~" ]],keymap)
+        old_bindings.__delete=old_bindings.__delete or rl.getbinding([["\e[3~"]],keymap)
         local delete_name="vi_telex_delete_"..keymap
         _G[delete_name]=make_delete_handler()
-        rl.setbinding([[ "\e[3~" ]],"luafunc:"..delete_name,keymap)
+        rl.setbinding([["\e[3~"]],"luafunc:"..delete_name,keymap)
     end
 end
 
