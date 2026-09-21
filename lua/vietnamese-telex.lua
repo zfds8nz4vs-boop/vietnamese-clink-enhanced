@@ -181,7 +181,13 @@ local function choose_tone_index(chars)
     -- uây, uôi, uya, uyê, uơ/ưới/ươu families, etc.
     if #work==3 then
         local target=2
-        if seq=="uyê" then target=3 end
+        if seq=="uyê" then
+            target=3
+        elseif seq=="uây" then
+            target=2
+        elseif seq=="uyu" then
+            target=2
+        end
         return idx[start+target-1]
     end
 
@@ -231,19 +237,34 @@ local valid_onsets = {
 }
 
 local valid_nuclei = {
-    a=true,ai=true,ao=true,au=true,ay=true,ă=true,â=true,
-    e=true,eo=true,ê=true,êu=true,
-    i=true,ia=true,ie=true,iu=true,iê=true,
-    o=true,oi=true,oa=true,oe=true,oo=true,ô=true,ôi=true,ôô=true,ơ=true,ơi=true,
-    u=true,ua=true,ui=true,uo=true,uô=true,uê=true,ư=true,ưa=true,ưi=true,ươ=true,ưu=true,
-    y=true,ye=true,yê=true,
-    uy=true,uya=true,uye=true,uyê=true,uyu=true,
-    oai=true,oay=true,oeu=true,
-    uai=true,uay=true,uây=true,uoi=true,uôi=true,
-    iêu=true,yêu=true,ieu=true,yeu=true,
-    uâ=true, uây=true, ươu=true,
-}
+    -- Single vowels.
+    a=true, ă=true, â=true, e=true, ê=true, i=true, o=true, ô=true, ơ=true,
+    u=true, ư=true, y=true,
 
+    -- Common open/closed diphthongs and vowel pairs.
+    ai=true, ao=true, au=true, ay=true, âu=true, ây=true,
+    eo=true, êu=true,
+    ia=true, iu=true,
+    oa=true, oe=true, oi=true, ôi=true, ơi=true,
+    ua=true, ui=true, ưa=true, ưi=true, ưu=true,
+    uê=true, uơ=true, uy=true,
+
+    -- Iê/uô/ươ families.
+    iê=true, yê=true, uô=true, ươ=true,
+
+    -- Common triphthongs.
+    oai=true, oay=true,
+    uai=true, uay=true, uây=true,
+    uoi=true, uôi=true,
+    ươi=true,
+    iêu=true, yêu=true,
+    uyê=true,
+    ươu=true,
+
+    -- A few valid orthographic sequences encountered in names/loanwords.
+    iau=true, ieu=true, yeu=true,
+    uya=true, uye=true, uyu=true,
+}
 local valid_codas = {
     c=true,ch=true,m=true,n=true,ng=true,nh=true,p=true,t=true,
     C=true,CH=true,M=true,N=true,NG=true,NH=true,P=true,T=true,
