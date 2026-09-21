@@ -77,3 +77,22 @@ hoas -> hoá
 hoais -> hoáis
 khoes -> khoé
 thuys -> thuý
+
+
+# Tone must NOT be added to invalid Vietnamese syllable structures.
+# The validator is phonotactic rather than dictionary-only, so names/new words
+# remain possible while malformed onsets such as pg-, nb-, tg- are blocked.
+pgeps -> pgep
+nbees -> nbee
+tgaos -> tgao
+pgas -> pga
+nbs -> nb
+tges -> tge
+
+# Valid syllables with codas must still receive tones.
+mats -> mát
+mens -> mén
+ngungs -> ngúng
+phangs -> pháng
+thangs -> thắng
+nguyeets -> nguyếts
