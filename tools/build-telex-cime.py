@@ -38,6 +38,8 @@ def _map_syllable(text, tone_before_coda=False):
         parts.append((shape,base in VOWELS))
         if ch_tone: tone=ch_tone
     raw="".join(shape for shape,_ in parts)
+    if raw=="uwow": raw="uow"
+    elif raw=="UWOW": raw="UOW"
     if not tone: return raw
     if not tone_before_coda: return raw+tone
     last=max((i for i,(_,v) in enumerate(parts) if v),default=-1)
