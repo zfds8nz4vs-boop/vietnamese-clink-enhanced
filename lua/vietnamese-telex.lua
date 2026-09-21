@@ -157,8 +157,14 @@ local function transform_current_word(rl_buffer)
     local prefix=line:sub(1,cursor-1)
 
     local word_start=1
-    local sep=prefix:find("[^%aÀ-ỹĐđ][%aÀ-ỹĐđ]*$",1)
-    if sep then word_start=sep+1 end
+    local byte_pos=1
+    for _,c in ipairs(utf8_chars(prefix)) do
+        local is_word = c:match("^[A-Za-z]$") ~= nil or unaccent[c] ~= nil
+        if not is_word then
+            word_start=byte_pos+#c
+        end
+        byte_pos=byte_pos+#c
+    end
 
     local raw_word=prefix:sub(word_start)
     if raw_word=="" then return end
