@@ -1,0 +1,118 @@
+name: Release Vietnamese Clink pack
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag
+        required: true
+        default: vvi-official-3-1
+      prerelease:
+        description: Mark as prerelease
+        required: true
+        type: boolean
+        default: false
+  push:
+    paths:
+      - "tools/**"
+      - "source/**"
+      - "Lexicons/vi.emoji.json"
+      - "lua/vietnamese-telex.lua"
+      - "README.md"
+      - "NOTICE.md"
+      - "LICENSE.md"
+      - ".github/workflows/release-vietnamese.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || 'vvi-official-3-1' }}
+      PRERELEASE: ${{ github.event.inputs.prerelease || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install inputs
+        run: |
+          python3 tools/fetch-vietnamese-sources.py
+          python3 - <<'PY'
+          import bz2, pathlib
+          src = pathlib.Path("source/vie_sentences.tsv.bz2")
+          out = pathlib.Path("source/vie_sentences.tsv")
+          with bz2.open(src, "rb") as f:
+              out.write_bytes(f.read())
+          PY
+
+      - name: Build and validate pack
+        run: |
+          python3 tools/build-pack.py vi source/vi_50k.txt
+          python3 tools/build-next-word.py vi source/vi_50k.txt source/vie_sentences.tsv
+          python3 tools/validate-pack.py vi
+          python3 - <<'PY'
+          import json, pathlib, hashlib
+          files = [
+              pathlib.Path("Lexicons/vi.clex"),
+              pathlib.Path("Lexicons/vi.cngm"),
+              pathlib.Path("Lexicons/vi.emoji.json"),
+              pathlib.Path("lua/vietnamese-telex.lua"),
+          ]
+          manifest = {
+              "schema_version": 1,
+              "id": "vi--vi",
+              "language": "Vietnamese",
+              "locale": "vi-VN",
+              "input_method": "Telex",
+              "release": "${{ env.TAG }}",
+              "artifacts": [
+                  {"name": p.name, "sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "size": p.stat().st_size}
+                  for p in files
+              ]
+          }
+          pathlib.Path("manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Assemble release assets
+        run: |
+          mkdir -p release
+          cp Lexicons/vi.clex release/vi--vi.clex
+          cp Lexicons/vi.cngm release/vi--vi.cngm
+          cp Lexicons/vi.emoji.json release/vi--vi.emoji.json
+          cp lua/vietnamese-telex.lua release/vi--vietnamese-telex.lua
+          cp manifest.json README.md NOTICE.md LICENSE.md release/
+          cat > release/RELEASE-NOTES.md <<'EOF'
+          # Vietnamese Clink pack
+
+          Vietnamese Telex language/input pack for Clink.
+
+          Included:
+          - `vi--vi.clex`: Vietnamese vocabulary dictionary.
+          - `vi--vi.cngm`: Vietnamese next-word model.
+          - `vi--vi.emoji.json`: Vietnamese emoji aliases.
+          - `vi--vietnamese-telex.lua`: Clink-side Telex input adapter.
+          - `manifest.json`: release manifest with SHA-256 checksums.
+          - `NOTICE.md` and `LICENSE.md`: provenance and licensing.
+
+          The Lua input adapter is the actual Telex input layer. The CLEX/CNGM
+          files provide dictionary and next-word data and do not contain the
+          UniKey input engine.
+
+          This is an initial Vietnamese pack release. The CNGM builder is
+          project-local and its byte-level compatibility with every upstream
+          Clink language-pack consumer has not been independently verified.
+          EOF
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          gh release create "$TAG" --title "Clink Vietnamese · Telex · $TAG" --target "$GITHUB_SHA" --notes-file release/RELEASE-NOTES.md \
+            release/manifest.json release/vi--vi.clex release/vi--vi.cngm \
+            release/vi--vi.emoji.json release/vi--vietnamese-telex.lua \
+            release/README.md release/NOTICE.md release/LICENSE.md
