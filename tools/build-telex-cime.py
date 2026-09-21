@@ -114,12 +114,12 @@ def tone_reading(word, chooser=choose_tone_index):
     for ch in chars:
         if ch.isalpha(): buf.append(ch)
         else:
-            if buf: out.append(_tone_syllable_reading("".join(buf))); buf=[]
+            if buf: out.append(_tone_syllable_reading("".join(buf), chooser)); buf=[]
             out.append(ch)
-    if buf: out.append(_tone_syllable_reading("".join(buf)))
+    if buf: out.append(_tone_syllable_reading("".join(buf), chooser))
     return "".join(out)
 
-def _tone_syllable_reading(syllable):
+def _tone_syllable_reading(syllable, chooser):
     chars=list(unicodedata.normalize("NFC",syllable))
     tone=None
     for ch in chars:
